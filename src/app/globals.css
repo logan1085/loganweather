@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+* {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: #0f172a;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.weather-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  transition: background 1.5s ease;
+}
+
+.particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bg-sunny {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8, #7dd3fc, #bae6fd);
+}
+
+.bg-cloudy {
+  background: linear-gradient(135deg, #475569, #64748b, #94a3b8, #cbd5e1);
+}
+
+.bg-rainy {
+  background: linear-gradient(135deg, #1e293b, #334155, #475569, #64748b);
+}
+
+.bg-night {
+  background: linear-gradient(135deg, #0f172a, #1e1b4b, #312e81, #1e1b4b);
+}
+
+.bg-stormy {
+  background: linear-gradient(135deg, #0f172a, #1c1917, #292524, #1e293b);
+}
+
+.bg-snowy {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1, #94a3b8, #e2e8f0);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.search-input {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+.suggestions-dropdown {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.suggestion-item {
+  color: white;
+}
+
+.suggestion-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.weather-icon {
+  filter: drop-shadow(0 4px 20px rgba(255, 255, 255, 0.3));
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+.float-anim {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.detail-card {
+  transition: all 0.3s ease;
+}
+
+.detail-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.forecast-card {
+  transition: all 0.3s ease;
+}
+
+.forecast-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.temp-display {
+  text-shadow: 0 4px 30px rgba(255, 255, 255, 0.3);
+}
+
+.hourly-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.unit-toggle {
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.unit-active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sun-rays {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.rain-particle {
+  position: absolute;
+  width: 2px;
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.35));
+  animation-name: rain-drop;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.snow-particle {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  animation-name: snow-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes rain-drop {
+  0% {
+    transform: translateY(-120vh) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(120vh) translateX(-20px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0.3;
+  }
+}
