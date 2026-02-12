@@ -1,0 +1,2 @@
+DAILY_TRIGGER_URL
+Value: https://YOUR-VERCEL-URL.vercel.app/api/notifications/daily
