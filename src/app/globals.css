@@ -190,6 +190,106 @@ body {
   animation: avatar-bob 4s ease-in-out infinite;
 }
 
+.avatar-lottie {
+  position: relative;
+  width: 240px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+
+.avatar-lottie-player {
+  width: 220px;
+  height: 220px;
+  z-index: 2;
+}
+
+.avatar-lottie-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(
+    circle,
+    var(--avatar-primary, rgba(125, 211, 252, 0.6)),
+    transparent 65%
+  );
+  opacity: 0.5;
+  filter: blur(22px);
+  z-index: 1;
+}
+
+.avatar-lottie-heat {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(251,191,36,0.9), rgba(251,191,36,0.3));
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+  animation: avatar-sun 4s ease-in-out infinite;
+  z-index: 3;
+}
+
+.avatar-lottie-cold {
+  position: absolute;
+  bottom: 22px;
+  left: 24px;
+  width: 70px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(
+    120deg,
+    var(--avatar-accent, rgba(248, 250, 252, 0.8)),
+    rgba(255, 255, 255, 0.1)
+  );
+  opacity: 0.9;
+  z-index: 3;
+}
+
+.avatar-lottie-rain {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  opacity: 0.6;
+  animation: avatar-rain 2.4s linear infinite;
+  z-index: 3;
+}
+
+.avatar-lottie-wind {
+  position: absolute;
+  bottom: 34px;
+  width: 140px;
+  height: 16px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: avatar-wind 2.2s ease-in-out infinite;
+  z-index: 3;
+}
+
+@keyframes avatar-rain {
+  0% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(20px);
+  }
+}
+
 .avatar-halo {
   position: absolute;
   inset: -30px;

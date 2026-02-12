@@ -1,6 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import lottie from "lottie-web";
+import avatarAnimation from "@/app/animations/skyview-avatar.json";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
 
@@ -92,6 +101,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const [locationChosen, setLocationChosen] = useState(false);
   const [unitChosen, setUnitChosen] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const avatarRef = useRef<HTMLDivElement | null>(null);
 
   const themeClass = conditionToTheme(weather.current.condition);
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
@@ -207,6 +217,22 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
       window.clearTimeout(timeoutId);
     };
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!avatarRef.current) return;
+    const animation = lottie.loadAnimation({
+      container: avatarRef.current,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+      animationData: avatarAnimation,
+      rendererSettings: {
+        preserveAspectRatio: "xMidYMid meet",
+      },
+    });
+
+    return () => animation.destroy();
+  }, []);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -1011,7 +1037,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
                 <div className="w-full lg:w-[280px] flex items-center justify-center">
                   <div
-                    className="avatar-card"
+                    className="avatar-lottie"
                     style={
                       {
                         "--avatar-primary": palettePrimary,
@@ -1020,24 +1046,12 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       } as CSSProperties
                     }
                   >
-                    <div className="avatar-halo" />
-                    <div className="avatar-head">
-                      <div className="avatar-glow" />
-                      {avatarIsHot ? <div className="avatar-sun" /> : null}
-                      <div className="avatar-face">
-                        <span className="avatar-eye" />
-                        <span className="avatar-eye" />
-                        <span className="avatar-smile" />
-                      </div>
-                    </div>
-                    <div className="avatar-body">
-                      {avatarIsCold ? <div className="avatar-scarf" /> : null}
-                      {avatarIsWet ? <div className="avatar-hood" /> : null}
-                      {avatarIsWindy ? <div className="avatar-wind" /> : null}
-                      <div className="avatar-jacket" />
-                      <div className="avatar-shirt" />
-                    </div>
-                    <div className="avatar-shadow" />
+                    <div ref={avatarRef} className="avatar-lottie-player" />
+                    <div className="avatar-lottie-glow" />
+                    {avatarIsHot ? <div className="avatar-lottie-heat" /> : null}
+                    {avatarIsCold ? <div className="avatar-lottie-cold" /> : null}
+                    {avatarIsWet ? <div className="avatar-lottie-rain" /> : null}
+                    {avatarIsWindy ? <div className="avatar-lottie-wind" /> : null}
                   </div>
                 </div>
               </div>
