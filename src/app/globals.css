@@ -178,6 +178,119 @@ body {
   pointer-events: none;
 }
 
+.avatar-card {
+  position: relative;
+  width: 220px;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  animation: avatar-bob 4s ease-in-out infinite;
+}
+
+.avatar-head {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 48px;
+  background: linear-gradient(140deg, rgba(255,255,255,0.5), rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle, rgba(255,255,255,0.35), transparent 70%);
+  opacity: 0.6;
+}
+
+.avatar-face {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 32px;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 1;
+}
+
+.avatar-eye {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.9);
+}
+
+.avatar-smile {
+  position: absolute;
+  bottom: 18px;
+  width: 32px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.8);
+  border-top: none;
+  border-radius: 0 0 20px 20px;
+}
+
+.avatar-body {
+  position: relative;
+  width: 160px;
+  height: 150px;
+  border-radius: 32px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20px;
+  overflow: hidden;
+}
+
+.avatar-jacket {
+  position: absolute;
+  width: 140px;
+  height: 130px;
+  border-radius: 28px;
+  background: linear-gradient(160deg, rgba(59,130,246,0.35), rgba(14,165,233,0.1));
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.avatar-shirt {
+  position: absolute;
+  width: 100px;
+  height: 90px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+  border: 1px solid rgba(255,255,255,0.2);
+  top: 30px;
+}
+
+.avatar-shadow {
+  width: 120px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.3);
+  filter: blur(10px);
+}
+
+@keyframes avatar-bob {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .rain-particle {
   position: absolute;
   width: 2px;

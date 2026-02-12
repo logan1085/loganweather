@@ -327,6 +327,148 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const onboardingComplete =
     locationChosen && unitChosen && subscribeState === "success";
 
+  const outfitLooks = useMemo(() => {
+    const feelsLike = weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70;
+    const condition = weather.current.condition.toLowerCase();
+    const windy = (weather.current.windSpeedMph ?? 0) >= 18;
+    const wet = condition.includes("rain") || condition.includes("shower");
+    const snowy = condition.includes("snow") || condition.includes("sleet");
+    const stormy = condition.includes("storm") || condition.includes("thunder");
+
+    const looks: Array<{
+      name: string;
+      vibe: string;
+      layers: string[];
+      extras: string[];
+      palette: string[];
+    }> = [];
+
+    if (feelsLike >= 85) {
+      looks.push(
+        {
+          name: "Heatwave Minimal",
+          vibe: "Lightweight + breathable",
+          layers: ["Linen tee", "Pleated shorts", "Sandal slip-ons"],
+          extras: ["SPF 50", "Polarized shades", "Cooling mist"],
+          palette: ["Sand", "Seafoam", "White"],
+        },
+        {
+          name: "City Swim",
+          vibe: "Poolside ready",
+          layers: ["Tank or bandeau", "Relaxed button-down", "Lightweight skirt"],
+          extras: ["Waterproof tote", "Hair clip", "Hydration bottle"],
+          palette: ["Coral", "Sky", "Vanilla"],
+        }
+      );
+    } else if (feelsLike >= 65) {
+      looks.push(
+        {
+          name: "Golden Hour",
+          vibe: "Soft layers",
+          layers: ["Knit tee", "Wide-leg trousers", "Low-profile sneakers"],
+          extras: ["Light scarf", "Crossbody", "Lip balm"],
+          palette: ["Oat", "Terracotta", "Soft navy"],
+        },
+        {
+          name: "Weekend Air",
+          vibe: "Easy + fresh",
+          layers: ["Oversized shirt", "Bike shorts", "Crew socks"],
+          extras: ["Bucket hat", "Mini tote", "Gloss"],
+          palette: ["Cloud", "Mint", "Graphite"],
+        }
+      );
+    } else if (feelsLike >= 45) {
+      looks.push(
+        {
+          name: "Crisp Layer",
+          vibe: "Clean + structured",
+          layers: ["Mock-neck top", "Trench or chore jacket", "Straight denim"],
+          extras: ["Leather belt", "Medium tote", "Light beanie"],
+          palette: ["Stone", "Moss", "Ink"],
+        },
+        {
+          name: "Studio Walk",
+          vibe: "Sport luxe",
+          layers: ["Cropped hoodie", "Cargo skirt", "High-top sneakers"],
+          extras: ["Sleek cap", "Earbuds", "Thermal flask"],
+          palette: ["Pebble", "Pine", "Black"],
+        }
+      );
+    } else if (feelsLike >= 25) {
+      looks.push(
+        {
+          name: "Cold Front",
+          vibe: "Warm but sleek",
+          layers: ["Thermal base", "Puffer coat", "Wool trousers"],
+          extras: ["Cashmere scarf", "Touchscreen gloves", "Hand cream"],
+          palette: ["Charcoal", "Ice", "Cobalt"],
+        },
+        {
+          name: "Night Shift",
+          vibe: "Moody cozy",
+          layers: ["Ribbed turtleneck", "Longline coat", "Chunky boots"],
+          extras: ["Beanie", "Tote", "Layered rings"],
+          palette: ["Onyx", "Smoke", "Plum"],
+        }
+      );
+    } else {
+      looks.push(
+        {
+          name: "Frost Mode",
+          vibe: "Insulated + bold",
+          layers: ["Thermal set", "Down parka", "Snow boots"],
+          extras: ["Neck gaiter", "Heat packs", "Insulated bottle"],
+          palette: ["Midnight", "Arctic blue", "Steel"],
+        },
+        {
+          name: "Polar Luxe",
+          vibe: "Luxury warmth",
+          layers: ["Wool base", "Shearling jacket", "Fleece-lined leggings"],
+          extras: ["Ear warmers", "Leather gloves", "Cabin socks"],
+          palette: ["Espresso", "Ivory", "Deep teal"],
+        }
+      );
+    }
+
+    if (wet || stormy || snowy) {
+      looks.push({
+        name: snowy ? "Snow Drift" : "Rain Shield",
+        vibe: "Weatherproof",
+        layers: [
+          "Waterproof shell",
+          "Grip-sole boots",
+          "Quick-dry layers",
+        ],
+        extras: [
+          snowy ? "Thermal hat" : "Compact umbrella",
+          snowy ? "Snow gaiters" : "Waterproof tote",
+          "Reflective detail",
+        ],
+        palette: ["Slate", "Midnight", "Neon accent"],
+      });
+    }
+
+    if (windy) {
+      looks.push({
+        name: "Wind Runner",
+        vibe: "Secure + tucked",
+        layers: ["Windbreaker", "Slim jogger", "High-top sneakers"],
+        extras: ["Hair ties", "Zip pockets", "Lightweight gloves"],
+        palette: ["Carbon", "Olive", "Sand"],
+      });
+    }
+
+    return looks;
+  }, [weather.current]);
+
+  const [lookIndex, setLookIndex] = useState(0);
+
+  useEffect(() => {
+    setLookIndex(0);
+  }, [weather.location.lat, weather.location.lon, weather.current.condition]);
+
+  const activeLook = outfitLooks[lookIndex % outfitLooks.length];
+
   return (
     <div className="text-white relative">
       <div className={`weather-bg ${themeClass}`} />
@@ -737,6 +879,105 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
               </div>
             </section>
           </div>
+
+          <section className="fade-in-up mb-8" style={{ animationDelay: "0.28s" }}>
+            <div className="glass rounded-3xl p-6 sm:p-8">
+              <div className="flex flex-col lg:flex-row items-start justify-between gap-8">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-white/60 text-lg">🧥</span>
+                    <h3 className="text-lg font-semibold">Outfit Studio</h3>
+                  </div>
+                  <p className="text-sm text-white/60 max-w-xl">
+                    Your digital stylist builds looks based on today’s conditions.
+                    Tap shuffle for a new vibe.
+                  </p>
+
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="glass rounded-2xl p-4">
+                      <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
+                        Look
+                      </p>
+                      <p className="text-xl font-semibold mt-2">{activeLook.name}</p>
+                      <p className="text-sm text-white/60 mt-1">{activeLook.vibe}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {activeLook.palette.map((color) => (
+                          <span
+                            key={color}
+                            className="px-2.5 py-1 rounded-full text-xs bg-white/10 text-white/70"
+                          >
+                            {color}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="glass rounded-2xl p-4">
+                      <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
+                        Layers
+                      </p>
+                      <ul className="mt-3 text-sm text-white/70 space-y-2">
+                        {activeLook.layers.map((item) => (
+                          <li key={item} className="flex items-center gap-2">
+                            <span className="text-white/40">•</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="glass rounded-2xl p-4 mt-4">
+                    <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
+                      Extras
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {activeLook.extras.map((item) => (
+                        <span
+                          key={item}
+                          className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/70"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setLookIndex((prev) => prev + 1)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/20 hover:bg-white/30 transition-all"
+                    >
+                      Shuffle look
+                    </button>
+                    <span className="text-xs text-white/50">
+                      Tuned for {formatTemp(weather.current.feelsLikeF, unit)} ·{" "}
+                      {weather.current.condition}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-full lg:w-[280px] flex items-center justify-center">
+                  <div className="avatar-card">
+                    <div className="avatar-head">
+                      <div className="avatar-glow" />
+                      <div className="avatar-face">
+                        <span className="avatar-eye" />
+                        <span className="avatar-eye" />
+                        <span className="avatar-smile" />
+                      </div>
+                    </div>
+                    <div className="avatar-body">
+                      <div className="avatar-jacket" />
+                      <div className="avatar-shirt" />
+                    </div>
+                    <div className="avatar-shadow" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <section
             id="email-section"
