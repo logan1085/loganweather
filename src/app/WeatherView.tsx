@@ -8,7 +8,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import lottie from "lottie-web";
+import Script from "next/script";
 import avatarAnimation from "@/app/animations/skyview-avatar.json";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
@@ -102,6 +102,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const [unitChosen, setUnitChosen] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const avatarRef = useRef<HTMLDivElement | null>(null);
+  const [lottieReady, setLottieReady] = useState(false);
 
   const themeClass = conditionToTheme(weather.current.condition);
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
@@ -219,8 +220,11 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   }, [searchQuery]);
 
   useEffect(() => {
-    if (!avatarRef.current) return;
-    const animation = lottie.loadAnimation({
+    if (!lottieReady || !avatarRef.current) return;
+    const lottieInstance = (window as typeof window & { lottie?: any }).lottie;
+    if (!lottieInstance) return;
+
+    const animation = lottieInstance.loadAnimation({
       container: avatarRef.current,
       renderer: "svg",
       loop: true,
@@ -232,7 +236,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     });
 
     return () => animation.destroy();
-  }, []);
+  }, [lottieReady]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -548,6 +552,11 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
   return (
     <div className="text-white relative">
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"
+        strategy="afterInteractive"
+        onLoad={() => setLottieReady(true)}
+      />
       <div className={`weather-bg ${themeClass}`} />
       <div className="particles">
         {rain.map((drop) => (

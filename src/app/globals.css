@@ -198,7 +198,11 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 32px;
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.14),
+    rgba(255, 255, 255, 0.04)
+  );
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
   overflow: hidden;
@@ -208,6 +212,7 @@ body {
   width: 220px;
   height: 220px;
   z-index: 2;
+  filter: drop-shadow(0 18px 40px rgba(15, 23, 42, 0.25));
 }
 
 .avatar-lottie-glow {
