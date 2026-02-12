@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
 
@@ -468,6 +468,57 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   }, [weather.location.lat, weather.location.lon, weather.current.condition]);
 
   const activeLook = outfitLooks[lookIndex % outfitLooks.length];
+  const feelsLikeForAvatar =
+    weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70;
+  const condition = weather.current.condition.toLowerCase();
+  const avatarIsCold = feelsLikeForAvatar < 45;
+  const avatarIsHot = feelsLikeForAvatar >= 80;
+  const avatarIsWet = condition.includes("rain") || condition.includes("storm");
+  const avatarIsWindy = (weather.current.windSpeedMph ?? 0) >= 18;
+
+  const paletteMap: Record<string, string> = {
+    Sand: "#f6d8b5",
+    Seafoam: "#9ee7d5",
+    White: "#f8fafc",
+    Coral: "#fb7185",
+    Sky: "#7dd3fc",
+    Vanilla: "#fef3c7",
+    Oat: "#e7d6c4",
+    Terracotta: "#e07a5f",
+    "Soft navy": "#27374d",
+    Cloud: "#e2e8f0",
+    Mint: "#99f6e4",
+    Graphite: "#475569",
+    Stone: "#d6d3d1",
+    Moss: "#4d7c5f",
+    Ink: "#0f172a",
+    Pebble: "#cbd5e1",
+    Pine: "#1f3d2b",
+    Black: "#0b0f19",
+    Charcoal: "#1f2937",
+    Ice: "#dbeafe",
+    Cobalt: "#2563eb",
+    Onyx: "#111827",
+    Smoke: "#4b5563",
+    Plum: "#7c3aed",
+    Midnight: "#0f172a",
+    "Arctic blue": "#93c5fd",
+    Steel: "#64748b",
+    Espresso: "#3b2f2f",
+    Ivory: "#f8f5ee",
+    "Deep teal": "#0f766e",
+    Slate: "#334155",
+    "Neon accent": "#22d3ee",
+    Neon: "#22d3ee",
+    Carbon: "#1f2937",
+    Olive: "#6b7f3f",
+  };
+
+  const pickColor = (label: string, fallback: string) =>
+    paletteMap[label] ?? fallback;
+  const palettePrimary = pickColor(activeLook.palette[0] ?? "", "#7dd3fc");
+  const paletteSecondary = pickColor(activeLook.palette[1] ?? "", "#f8fafc");
+  const paletteAccent = pickColor(activeLook.palette[2] ?? "", "#fbbf24");
 
   return (
     <div className="text-white relative">
@@ -959,9 +1010,20 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 </div>
 
                 <div className="w-full lg:w-[280px] flex items-center justify-center">
-                  <div className="avatar-card">
+                  <div
+                    className="avatar-card"
+                    style={
+                      {
+                        "--avatar-primary": palettePrimary,
+                        "--avatar-secondary": paletteSecondary,
+                        "--avatar-accent": paletteAccent,
+                      } as CSSProperties
+                    }
+                  >
+                    <div className="avatar-halo" />
                     <div className="avatar-head">
                       <div className="avatar-glow" />
+                      {avatarIsHot ? <div className="avatar-sun" /> : null}
                       <div className="avatar-face">
                         <span className="avatar-eye" />
                         <span className="avatar-eye" />
@@ -969,6 +1031,9 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       </div>
                     </div>
                     <div className="avatar-body">
+                      {avatarIsCold ? <div className="avatar-scarf" /> : null}
+                      {avatarIsWet ? <div className="avatar-hood" /> : null}
+                      {avatarIsWindy ? <div className="avatar-wind" /> : null}
                       <div className="avatar-jacket" />
                       <div className="avatar-shirt" />
                     </div>
