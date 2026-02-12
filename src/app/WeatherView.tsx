@@ -8,8 +8,6 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import Script from "next/script";
-import avatarAnimation from "@/app/animations/skyview-avatar.json";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
 
@@ -101,8 +99,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const [locationChosen, setLocationChosen] = useState(false);
   const [unitChosen, setUnitChosen] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
-  const avatarRef = useRef<HTMLDivElement | null>(null);
-  const [lottieReady, setLottieReady] = useState(false);
 
   const themeClass = conditionToTheme(weather.current.condition);
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
@@ -218,25 +214,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
       window.clearTimeout(timeoutId);
     };
   }, [searchQuery]);
-
-  useEffect(() => {
-    if (!lottieReady || !avatarRef.current) return;
-    const lottieInstance = (window as typeof window & { lottie?: any }).lottie;
-    if (!lottieInstance) return;
-
-    const animation = lottieInstance.loadAnimation({
-      container: avatarRef.current,
-      renderer: "svg",
-      loop: true,
-      autoplay: true,
-      animationData: avatarAnimation,
-      rendererSettings: {
-        preserveAspectRatio: "xMidYMid meet",
-      },
-    });
-
-    return () => animation.destroy();
-  }, [lottieReady]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -552,11 +529,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
   return (
     <div className="text-white relative">
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"
-        strategy="afterInteractive"
-        onLoad={() => setLottieReady(true)}
-      />
       <div className={`weather-bg ${themeClass}`} />
       <div className="particles">
         {rain.map((drop) => (
@@ -1046,7 +1018,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
                 <div className="w-full lg:w-[280px] flex items-center justify-center">
                   <div
-                    className="avatar-lottie"
+                    className="avatar-shell"
                     style={
                       {
                         "--avatar-primary": palettePrimary,
@@ -1055,12 +1027,50 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       } as CSSProperties
                     }
                   >
-                    <div ref={avatarRef} className="avatar-lottie-player" />
-                    <div className="avatar-lottie-glow" />
-                    {avatarIsHot ? <div className="avatar-lottie-heat" /> : null}
-                    {avatarIsCold ? <div className="avatar-lottie-cold" /> : null}
-                    {avatarIsWet ? <div className="avatar-lottie-rain" /> : null}
-                    {avatarIsWindy ? <div className="avatar-lottie-wind" /> : null}
+                    <div className="avatar-glow-backdrop" />
+                    <svg
+                      className="avatar-svg"
+                      viewBox="0 0 240 260"
+                      aria-hidden="true"
+                    >
+                      <defs>
+                        <linearGradient id="bodyGradient" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="var(--avatar-primary)" />
+                          <stop offset="100%" stopColor="rgba(255,255,255,0.15)" />
+                        </linearGradient>
+                        <linearGradient id="headGradient" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#f8fafc" />
+                          <stop offset="100%" stopColor="#e2e8f0" />
+                        </linearGradient>
+                      </defs>
+                      <g className="avatar-bob">
+                        <circle cx="120" cy="80" r="52" fill="url(#headGradient)" />
+                        <circle
+                          cx="95"
+                          cy="62"
+                          r="18"
+                          fill="rgba(255,255,255,0.6)"
+                        />
+                        <rect x="72" y="58" width="96" height="26" rx="13" fill="rgba(96,165,250,0.55)" />
+                        <rect x="60" y="120" width="120" height="96" rx="32" fill="url(#bodyGradient)" />
+                        <rect x="78" y="132" width="84" height="60" rx="24" fill="rgba(255,255,255,0.35)" />
+                        <g className="avatar-eyes">
+                          <circle cx="102" cy="82" r="5" fill="#1f2937" />
+                          <circle cx="138" cy="82" r="5" fill="#1f2937" />
+                        </g>
+                        <path
+                          d="M104 96 Q120 108 136 96"
+                          stroke="#334155"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          fill="none"
+                        />
+                      </g>
+                    </svg>
+                    {avatarIsHot ? <div className="avatar-badge avatar-heat" /> : null}
+                    {avatarIsCold ? <div className="avatar-badge avatar-cold" /> : null}
+                    {avatarIsWet ? <div className="avatar-badge avatar-rain" /> : null}
+                    {avatarIsWindy ? <div className="avatar-badge avatar-wind" /> : null}
                   </div>
                 </div>
               </div>
