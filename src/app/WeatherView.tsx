@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
 
@@ -88,6 +88,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     "idle" | "loading" | "error"
   >("idle");
   const [notice, setNotice] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [locationChosen, setLocationChosen] = useState(false);
+  const [unitChosen, setUnitChosen] = useState(false);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const themeClass = conditionToTheme(weather.current.condition);
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
@@ -95,7 +99,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const loadWeather = async (
     lat: number,
     lon: number,
-    name?: string | null
+    name?: string | null,
+    source: "auto" | "user" = "auto"
   ) => {
     try {
       setNotice(null);
@@ -114,17 +119,26 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
       const payload = await response.json();
       if (payload?.data) setWeather(payload.data as WeatherPayload);
       if (payload?.meta) setMeta(payload.meta as WeatherMeta);
+      if (source === "user") setLocationChosen(true);
     } catch {
       setNotice("We couldn’t load that location. Try another nearby city.");
     }
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const completed = window.localStorage.getItem("skyview_onboarding_complete");
+      setShowOnboarding(completed !== "true");
+    }
+  }, []);
+
+  useEffect(() => {
     const refresh = async () => {
       await loadWeather(
         weather.location.lat,
         weather.location.lon,
-        weather.location.name
+        weather.location.name,
+        "auto"
       );
     };
 
@@ -219,9 +233,20 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
         return;
       }
       setSubscribeState("success");
+      if (showOnboarding) {
+        window.localStorage.setItem("skyview_onboarding_complete", "true");
+        setShowOnboarding(false);
+      }
     } catch {
       setSubscribeState("error");
     }
+  };
+
+  const dismissOnboarding = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("skyview_onboarding_complete", "true");
+    }
+    setShowOnboarding(false);
   };
 
   const formatSuggestionLabel = (item: GeoSuggestion) =>
@@ -233,7 +258,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     setSuggestions([]);
     setNotice(null);
     setSearchStatus("loading");
-    await loadWeather(item.lat, item.lon, label);
+    await loadWeather(item.lat, item.lon, label, "user");
     setSearchStatus("idle");
   };
 
@@ -277,7 +302,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        await loadWeather(latitude, longitude, "Your location");
+        await loadWeather(latitude, longitude, "Your location", "user");
         setLocationStatus("idle");
       },
       () => {
@@ -288,6 +313,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     );
   };
 
+  const focusSearch = () => {
+    searchRef.current?.focus();
+  };
+
   const summary = useMemo(() => {
     const day = weather.daily[0];
     if (!day) return "";
@@ -295,6 +324,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   }, [weather.daily, unit]);
 
   const heroEmoji = conditionToEmoji(weather.current.condition);
+  const onboardingComplete =
+    locationChosen && unitChosen && subscribeState === "success";
 
   return (
     <div className="text-white relative">
@@ -348,6 +379,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search a city or ZIP"
                   className="search-input w-full pl-11 pr-20 py-3 rounded-2xl text-white placeholder-white/50 outline-none text-sm font-medium"
+                  ref={searchRef}
                 />
                 <button
                   type="submit"
@@ -389,7 +421,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 className={`unit-toggle px-3 py-1.5 rounded-xl text-sm font-semibold ${
                   unit === "C" ? "unit-active" : ""
                 }`}
-                onClick={() => setUnit("C")}
+                onClick={() => {
+                  setUnit("C");
+                  setUnitChosen(true);
+                }}
               >
                 °C
               </button>
@@ -397,7 +432,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 className={`unit-toggle px-3 py-1.5 rounded-xl text-sm font-semibold ${
                   unit === "F" ? "unit-active" : ""
                 }`}
-                onClick={() => setUnit("F")}
+                onClick={() => {
+                  setUnit("F");
+                  setUnitChosen(true);
+                }}
               >
                 °F
               </button>
@@ -406,6 +444,138 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
         </header>
 
         <main className="px-4 py-6 max-w-6xl mx-auto" id="mainContent">
+          {showOnboarding ? (
+            <section className="glass rounded-3xl p-6 sm:p-8 mb-6">
+              <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+                    Welcome to SkyView
+                  </p>
+                  <h2 className="text-2xl sm:text-3xl font-semibold mt-2">
+                    Let’s personalize your forecast
+                  </h2>
+                  <p className="text-sm text-white/60 mt-2 max-w-xl">
+                    Pick your location, choose your units, and opt in to a daily
+                    briefing. It takes 20 seconds.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={dismissOnboarding}
+                    className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white transition-all"
+                  >
+                    Skip for now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissOnboarding}
+                    disabled={!onboardingComplete}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/20 hover:bg-white/30 transition-all disabled:opacity-40 disabled:hover:bg-white/20"
+                  >
+                    {onboardingComplete ? "Finish setup" : "Complete steps"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-semibold">
+                      {locationChosen ? "✓" : "1"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Set your location</p>
+                      <p className="text-xs text-white/50 mt-1">
+                        Use GPS or search for a city.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={handleLocate}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 transition-all"
+                        >
+                          Use my location
+                        </button>
+                        <button
+                          type="button"
+                          onClick={focusSearch}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 transition-all"
+                        >
+                          Search
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-semibold">
+                      {unitChosen ? "✓" : "2"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Choose units</p>
+                      <p className="text-xs text-white/50 mt-1">
+                        Pick Fahrenheit or Celsius.
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUnit("F");
+                            setUnitChosen(true);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                            unit === "F" ? "bg-white/25" : "bg-white/10 hover:bg-white/20"
+                          }`}
+                        >
+                          °F
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUnit("C");
+                            setUnitChosen(true);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                            unit === "C" ? "bg-white/25" : "bg-white/10 hover:bg-white/20"
+                          }`}
+                        >
+                          °C
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-semibold">
+                      {subscribeState === "success" ? "✓" : "3"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Daily briefing</p>
+                      <p className="text-xs text-white/50 mt-1">
+                        Get the 7:00 AM email for your city.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          document
+                            .getElementById("email-section")
+                            ?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="mt-3 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 transition-all"
+                      >
+                        Jump to email sign-up
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
           {notice ? (
             <div className="glass rounded-2xl p-4 mb-6 text-sm text-white/80">
               {notice}
@@ -568,7 +738,11 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
             </section>
           </div>
 
-          <section className="fade-in-up mb-8" style={{ animationDelay: "0.3s" }}>
+          <section
+            id="email-section"
+            className="fade-in-up mb-8"
+            style={{ animationDelay: "0.3s" }}
+          >
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="text-white/60">✉️</span>
               Morning Email Brief
