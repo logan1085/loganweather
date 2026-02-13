@@ -330,6 +330,57 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     return `H: ${formatTemp(day.highF, unit)} L: ${formatTemp(day.lowF, unit)}`;
   }, [weather.daily, unit]);
 
+  const toUnitValue = (valueF: number | null) => {
+    if (valueF === null) return null;
+    if (unit === "F") return valueF;
+    return (valueF - 32) * (5 / 9);
+  };
+
+  const timeBadge = useMemo(() => {
+    const now = new Date();
+    const time = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(now);
+    const date = new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(now);
+    return { time, date };
+  }, [updatedAt]);
+
+  const sparkline = useMemo(() => {
+    const days = weather.daily.slice(0, 7);
+    const values = days.map((day) => toUnitValue(day.highF));
+    const valid = values.filter((value): value is number => value !== null);
+    if (valid.length === 0 || days.length < 2) {
+      return { points: "", maxIndex: 0, minIndex: 0, values };
+    }
+
+    const min = Math.min(...valid);
+    const max = Math.max(...valid);
+    const range = max - min || 1;
+
+    const points = values
+      .map((value, index) => {
+        const x = (index / (values.length - 1)) * 100;
+        const y = value === null ? 50 : 100 - ((value - min) / range) * 100;
+        return `${x},${y}`;
+      })
+      .join(" ");
+
+    let maxIndex = 0;
+    let minIndex = 0;
+    values.forEach((value, index) => {
+      if (value === null) return;
+      if (value === max) maxIndex = index;
+      if (value === min) minIndex = index;
+    });
+
+    return { points, maxIndex, minIndex, values };
+  }, [weather.daily, unit]);
+
   const heroEmoji = conditionToEmoji(weather.current.condition);
   const onboardingComplete =
     locationChosen && unitChosen && subscribeState === "success";
@@ -469,12 +520,43 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   }, [weather.current]);
 
   const [lookIndex, setLookIndex] = useState(0);
+  const [savedLooks, setSavedLooks] = useState<string[]>([]);
 
   useEffect(() => {
     setLookIndex(0);
   }, [weather.location.lat, weather.location.lon, weather.current.condition]);
 
-  const activeLook = outfitLooks[lookIndex % outfitLooks.length];
+  const totalLooks = outfitLooks.length;
+  const currentLookIndex = totalLooks
+    ? ((lookIndex % totalLooks) + totalLooks) % totalLooks
+    : 0;
+  const activeLook = outfitLooks[currentLookIndex];
+  const safeLook = activeLook ?? {
+    name: "Weather Ready",
+    vibe: "Tailored to today",
+    layers: [],
+    extras: [],
+    palette: [],
+  };
+  const isSaved = savedLooks.includes(safeLook.name);
+
+  const handlePrevLook = () => {
+    if (totalLooks === 0) return;
+    setLookIndex((prev) => (prev - 1 + totalLooks) % totalLooks);
+  };
+
+  const handleNextLook = () => {
+    if (totalLooks === 0) return;
+    setLookIndex((prev) => (prev + 1) % totalLooks);
+  };
+
+  const handleSaveLook = () => {
+    setSavedLooks((prev) =>
+      prev.includes(safeLook.name)
+        ? prev.filter((name) => name !== safeLook.name)
+        : [...prev, safeLook.name]
+    );
+  };
   const feelsLikeForAvatar =
     weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70;
   const condition = weather.current.condition.toLowerCase();
@@ -523,9 +605,9 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
   const pickColor = (label: string, fallback: string) =>
     paletteMap[label] ?? fallback;
-  const palettePrimary = pickColor(activeLook.palette[0] ?? "", "#7dd3fc");
-  const paletteSecondary = pickColor(activeLook.palette[1] ?? "", "#f8fafc");
-  const paletteAccent = pickColor(activeLook.palette[2] ?? "", "#fbbf24");
+  const palettePrimary = pickColor(safeLook.palette[0] ?? "", "#7dd3fc");
+  const paletteSecondary = pickColor(safeLook.palette[1] ?? "", "#f8fafc");
+  const paletteAccent = pickColor(safeLook.palette[2] ?? "", "#fbbf24");
 
   return (
     <div className="text-white relative">
@@ -791,8 +873,16 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       {weather.location.name}
                     </h2>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="hero-pill">Local time · {timeBadge.time}</span>
+                    <span className="hero-pill">{timeBadge.date}</span>
+                    <span className="hero-pill">
+                      Updated {formatTime(updatedAt)}
+                    </span>
+                    <span className="hero-pill">{meta.source}</span>
+                  </div>
                   <p className="text-white/60 text-sm font-medium mb-6">
-                    Updated {formatTime(updatedAt)} · {meta.source}
+                    Forecast studio for your day — tuned for feel, not just the numbers.
                   </p>
                   <div className="flex items-start gap-2 justify-center lg:justify-start">
                     <span className="text-8xl sm:text-9xl font-extralight temp-display leading-none">
@@ -813,8 +903,14 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       Feels like {formatTemp(weather.current.feelsLikeF, unit)}
                     </span>
                   </div>
-                  <div className="mt-3 flex items-center gap-4 justify-center lg:justify-start text-sm text-white/50">
+                  <div className="mt-3 flex flex-wrap items-center gap-3 justify-center lg:justify-start text-sm text-white/50">
                     <span>{summary}</span>
+                    <span className="hero-pill">
+                      Wind {weather.current.windSpeedMph ?? "—"} mph
+                    </span>
+                    <span className="hero-pill">
+                      Humidity {weather.current.humidity ?? "—"}%
+                    </span>
                   </div>
                 </div>
                 <div className="relative float-anim">
@@ -866,6 +962,53 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 7-Day Forecast
               </h3>
               <div className="glass rounded-2xl p-4">
+                {sparkline.points ? (
+                  <div className="sparkline-wrap">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <polyline
+                        points={sparkline.points}
+                        className="sparkline-line"
+                      />
+                      {sparkline.values.map((value, index) => {
+                        if (value === null) return null;
+                        const x = (index / (sparkline.values.length - 1)) * 100;
+                        const min = Math.min(
+                          ...sparkline.values.filter(
+                            (item): item is number => item !== null
+                          )
+                        );
+                        const max = Math.max(
+                          ...sparkline.values.filter(
+                            (item): item is number => item !== null
+                          )
+                        );
+                        const range = max - min || 1;
+                        const y = 100 - ((value - min) / range) * 100;
+                        const isPeak = index === sparkline.maxIndex;
+                        const isLow = index === sparkline.minIndex;
+                        return (
+                          <circle
+                            key={`spark-${index}`}
+                            cx={x}
+                            cy={y}
+                            r={isPeak || isLow ? 2.2 : 1.4}
+                            className={
+                              isPeak
+                                ? "sparkline-dot sparkline-peak"
+                                : isLow
+                                  ? "sparkline-dot sparkline-low"
+                                  : "sparkline-dot"
+                            }
+                          />
+                        );
+                      })}
+                    </svg>
+                    <div className="sparkline-labels">
+                      <span>Weekly highs</span>
+                      <span>Peak & low markers</span>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="space-y-1">
                   {weather.daily.map((day) => {
                     const emoji = conditionToEmoji(day.summary);
@@ -956,10 +1099,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
                         Look
                       </p>
-                      <p className="text-xl font-semibold mt-2">{activeLook.name}</p>
-                      <p className="text-sm text-white/60 mt-1">{activeLook.vibe}</p>
+                      <p className="text-xl font-semibold mt-2">{safeLook.name}</p>
+                      <p className="text-sm text-white/60 mt-1">{safeLook.vibe}</p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {activeLook.palette.map((color) => (
+                        {safeLook.palette.map((color) => (
                           <span
                             key={color}
                             className="px-2.5 py-1 rounded-full text-xs bg-white/10 text-white/70"
@@ -975,7 +1118,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                         Layers
                       </p>
                       <ul className="mt-3 text-sm text-white/70 space-y-2">
-                        {activeLook.layers.map((item) => (
+                        {safeLook.layers.map((item) => (
                           <li key={item} className="flex items-center gap-2">
                             <span className="text-white/40">•</span>
                             {item}
@@ -990,7 +1133,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       Extras
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {activeLook.extras.map((item) => (
+                      {safeLook.extras.map((item) => (
                         <span
                           key={item}
                           className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/70"
@@ -1002,16 +1145,47 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   </div>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <div className="look-controls">
+                      <button type="button" onClick={handlePrevLook}>
+                        Prev
+                      </button>
+                      <button type="button" onClick={handleNextLook}>
+                        Next
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLookIndex((prev) => prev + 1)}
+                      >
+                        Shuffle
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setLookIndex((prev) => prev + 1)}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/20 hover:bg-white/30 transition-all"
+                      onClick={handleSaveLook}
+                      className={`look-action ${isSaved ? "look-action-active" : ""}`}
                     >
-                      Shuffle look
+                      {isSaved ? "Saved" : "Save look"}
+                    </button>
+                    <button type="button" className="look-action look-cta">
+                      Shop this look
                     </button>
                     <span className="text-xs text-white/50">
                       Tuned for {formatTemp(weather.current.feelsLikeF, unit)} ·{" "}
                       {weather.current.condition}
+                    </span>
+                  </div>
+                  <div className="look-dots">
+                    {outfitLooks.map((_, index) => (
+                      <button
+                        key={`look-${index}`}
+                        type="button"
+                        aria-label={`Look ${index + 1}`}
+                        onClick={() => setLookIndex(index)}
+                        className={index === currentLookIndex ? "look-dot active" : "look-dot"}
+                      />
+                    ))}
+                    <span className="text-xs text-white/40">
+                      {currentLookIndex + 1}/{totalLooks}
                     </span>
                   </div>
                 </div>
