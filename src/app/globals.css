@@ -204,10 +204,14 @@ body {
 
 .sparkline-line {
   fill: none;
-  stroke: rgba(148, 197, 255, 0.9);
-  stroke-width: 2.5;
+  stroke: url(#sparklineStroke);
+  stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.sparkline-area {
+  fill: url(#sparklineFill);
 }
 
 .sparkline-dot {

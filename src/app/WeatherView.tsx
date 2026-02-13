@@ -355,20 +355,48 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     const values = days.map((day) => toUnitValue(day.highF));
     const valid = values.filter((value): value is number => value !== null);
     if (valid.length === 0 || days.length < 2) {
-      return { points: "", maxIndex: 0, minIndex: 0, values };
+      return { path: "", area: "", maxIndex: 0, minIndex: 0, values };
     }
 
     const min = Math.min(...valid);
     const max = Math.max(...valid);
     const range = max - min || 1;
 
-    const points = values
-      .map((value, index) => {
-        const x = (index / (values.length - 1)) * 100;
-        const y = value === null ? 50 : 100 - ((value - min) / range) * 100;
-        return `${x},${y}`;
-      })
-      .join(" ");
+    const points = values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = value === null ? 50 : 100 - ((value - min) / range) * 100;
+      return { x, y };
+    });
+
+    const buildPath = (pointList: Array<{ x: number; y: number }>) => {
+      if (pointList.length < 2) return "";
+      const smoothing = 0.18;
+      let d = `M ${pointList[0].x},${pointList[0].y}`;
+      for (let i = 1; i < pointList.length; i += 1) {
+        const prev = pointList[i - 1];
+        const current = pointList[i];
+        const next = pointList[i + 1] ?? current;
+        const prevPrev = pointList[i - 2] ?? prev;
+
+        const dx1 = (current.x - prevPrev.x) * smoothing;
+        const dy1 = (current.y - prevPrev.y) * smoothing;
+        const dx2 = (next.x - prev.x) * smoothing;
+        const dy2 = (next.y - prev.y) * smoothing;
+
+        const cp1x = prev.x + dx1;
+        const cp1y = prev.y + dy1;
+        const cp2x = current.x - dx2;
+        const cp2y = current.y - dy2;
+
+        d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${current.x},${current.y}`;
+      }
+      return d;
+    };
+
+    const path = buildPath(points);
+    const area =
+      path +
+      ` L ${points[points.length - 1].x},100 L ${points[0].x},100 Z`;
 
     let maxIndex = 0;
     let minIndex = 0;
@@ -378,7 +406,21 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
       if (value === min) minIndex = index;
     });
 
-    return { points, maxIndex, minIndex, values };
+    return { path, area, maxIndex, minIndex, values, min, max };
+  }, [weather.daily, unit]);
+
+  const dailyRange = useMemo(() => {
+    const lows = weather.daily.map((day) => toUnitValue(day.lowF));
+    const highs = weather.daily.map((day) => toUnitValue(day.highF));
+    const lowVals = lows.filter((value): value is number => value !== null);
+    const highVals = highs.filter((value): value is number => value !== null);
+    if (lowVals.length === 0 || highVals.length === 0) {
+      return { min: 0, max: 1 };
+    }
+    return {
+      min: Math.min(...lowVals),
+      max: Math.max(...highVals),
+    };
   }, [weather.daily, unit]);
 
   const heroEmoji = conditionToEmoji(weather.current.condition);
@@ -962,28 +1004,28 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 7-Day Forecast
               </h3>
               <div className="glass rounded-2xl p-4">
-                {sparkline.points ? (
+                {sparkline.path ? (
                   <div className="sparkline-wrap">
                     <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                      <polyline
-                        points={sparkline.points}
-                        className="sparkline-line"
-                      />
+                      <defs>
+                        <linearGradient id="sparklineStroke" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#60a5fa" />
+                          <stop offset="100%" stopColor="#fbbf24" />
+                        </linearGradient>
+                        <linearGradient id="sparklineFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(96,165,250,0.35)" />
+                          <stop offset="100%" stopColor="rgba(15,23,42,0.05)" />
+                        </linearGradient>
+                      </defs>
+                      <path d={sparkline.area} className="sparkline-area" />
+                      <path d={sparkline.path} className="sparkline-line" />
                       {sparkline.values.map((value, index) => {
                         if (value === null) return null;
                         const x = (index / (sparkline.values.length - 1)) * 100;
-                        const min = Math.min(
-                          ...sparkline.values.filter(
-                            (item): item is number => item !== null
-                          )
-                        );
-                        const max = Math.max(
-                          ...sparkline.values.filter(
-                            (item): item is number => item !== null
-                          )
-                        );
-                        const range = max - min || 1;
-                        const y = 100 - ((value - min) / range) * 100;
+                    const sparkMin = sparkline.min ?? 0;
+                    const sparkMax = sparkline.max ?? 1;
+                    const range = sparkMax - sparkMin || 1;
+                    const y = 100 - ((value - sparkMin) / range) * 100;
                         const isPeak = index === sparkline.maxIndex;
                         const isLow = index === sparkline.minIndex;
                         return (
@@ -1012,6 +1054,15 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 <div className="space-y-1">
                   {weather.daily.map((day) => {
                     const emoji = conditionToEmoji(day.summary);
+                    const lowValue = toUnitValue(day.lowF);
+                    const highValue = toUnitValue(day.highF);
+                    const range = dailyRange.max - dailyRange.min || 1;
+                    const lowPercent =
+                      lowValue === null ? 0 : ((lowValue - dailyRange.min) / range) * 100;
+                    const highPercent =
+                      highValue === null ? 0 : ((highValue - dailyRange.min) / range) * 100;
+                    const barLeft = Math.min(lowPercent, highPercent);
+                    const barWidth = Math.max(highPercent - lowPercent, 8);
                     return (
                     <div key={day.date} className="forecast-card flex items-center gap-3 p-3 rounded-xl">
                       <span className="text-sm font-semibold w-12 text-white/70">
@@ -1022,7 +1073,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                         {formatTemp(day.lowF, unit)}
                       </span>
                       <div className="flex-1 h-2 rounded-full bg-white/10 relative mx-2">
-                        <div className="absolute h-full rounded-full bg-gradient-to-r from-blue-400 via-yellow-400 to-orange-400" style={{ left: "25%", width: "45%" }} />
+                        <div
+                          className="absolute h-full rounded-full bg-gradient-to-r from-blue-400 via-yellow-400 to-orange-400"
+                          style={{ left: `${barLeft}%`, width: `${barWidth}%` }}
+                        />
                       </div>
                       <span className="text-sm font-semibold w-8">
                         {formatTemp(day.highF, unit)}
