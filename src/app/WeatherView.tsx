@@ -1017,8 +1017,16 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                           <stop offset="100%" stopColor="rgba(15,23,42,0.05)" />
                         </linearGradient>
                       </defs>
-                      <path d={sparkline.area} className="sparkline-area" />
-                      <path d={sparkline.path} className="sparkline-line" />
+                      <path
+                        d={sparkline.area}
+                        className="sparkline-area"
+                        fill="url(#sparklineFill)"
+                      />
+                      <path
+                        d={sparkline.path}
+                        className="sparkline-line"
+                        stroke="url(#sparklineStroke)"
+                      />
                       {sparkline.values.map((value, index) => {
                         if (value === null) return null;
                         const x = (index / (sparkline.values.length - 1)) * 100;
