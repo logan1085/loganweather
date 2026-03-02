@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
@@ -599,57 +598,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
         : [...prev, safeLook.name]
     );
   };
-  const feelsLikeForAvatar =
-    weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70;
   const condition = weather.current.condition.toLowerCase();
-  const avatarIsCold = feelsLikeForAvatar < 45;
-  const avatarIsHot = feelsLikeForAvatar >= 80;
-  const avatarIsWet = condition.includes("rain") || condition.includes("storm");
-  const avatarIsWindy = (weather.current.windSpeedMph ?? 0) >= 18;
-
-  const paletteMap: Record<string, string> = {
-    Sand: "#f6d8b5",
-    Seafoam: "#9ee7d5",
-    White: "#f8fafc",
-    Coral: "#fb7185",
-    Sky: "#7dd3fc",
-    Vanilla: "#fef3c7",
-    Oat: "#e7d6c4",
-    Terracotta: "#e07a5f",
-    "Soft navy": "#27374d",
-    Cloud: "#e2e8f0",
-    Mint: "#99f6e4",
-    Graphite: "#475569",
-    Stone: "#d6d3d1",
-    Moss: "#4d7c5f",
-    Ink: "#0f172a",
-    Pebble: "#cbd5e1",
-    Pine: "#1f3d2b",
-    Black: "#0b0f19",
-    Charcoal: "#1f2937",
-    Ice: "#dbeafe",
-    Cobalt: "#2563eb",
-    Onyx: "#111827",
-    Smoke: "#4b5563",
-    Plum: "#7c3aed",
-    Midnight: "#0f172a",
-    "Arctic blue": "#93c5fd",
-    Steel: "#64748b",
-    Espresso: "#3b2f2f",
-    Ivory: "#f8f5ee",
-    "Deep teal": "#0f766e",
-    Slate: "#334155",
-    "Neon accent": "#22d3ee",
-    Neon: "#22d3ee",
-    Carbon: "#1f2937",
-    Olive: "#6b7f3f",
-  };
-
-  const pickColor = (label: string, fallback: string) =>
-    paletteMap[label] ?? fallback;
-  const palettePrimary = pickColor(safeLook.palette[0] ?? "", "#7dd3fc");
-  const paletteSecondary = pickColor(safeLook.palette[1] ?? "", "#f8fafc");
-  const paletteAccent = pickColor(safeLook.palette[2] ?? "", "#fbbf24");
+  const isCold = (weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70) < 45;
+  const isWet = condition.includes("rain") || condition.includes("storm");
+  const isWindy = (weather.current.windSpeedMph ?? 0) >= 18;
 
   return (
     <div className="text-white relative">
@@ -1144,170 +1096,120 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
           </div>
 
           <section className="fade-in-up mb-8" style={{ animationDelay: "0.28s" }}>
-            <div className="glass rounded-3xl p-6 sm:p-8">
-              <div className="flex flex-col lg:flex-row items-start justify-between gap-8">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-white/60 text-lg">🧥</span>
-                    <h3 className="text-lg font-semibold">Outfit Studio</h3>
-                  </div>
-                  <p className="text-sm text-white/60 max-w-xl">
-                    Your digital stylist builds looks based on today’s conditions.
-                    Tap shuffle for a new vibe.
-                  </p>
+            <div className="glass rounded-3xl p-6 sm:p-8 outfit-studio">
+              <div className="outfit-aura outfit-aura-one" />
+              <div className="outfit-aura outfit-aura-two" />
+              <div className="outfit-aura outfit-aura-three" />
 
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="glass rounded-2xl p-4">
-                      <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-                        Look
-                      </p>
-                      <p className="text-xl font-semibold mt-2">{safeLook.name}</p>
-                      <p className="text-sm text-white/60 mt-1">{safeLook.vibe}</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {safeLook.palette.map((color) => (
-                          <span
-                            key={color}
-                            className="px-2.5 py-1 rounded-full text-xs bg-white/10 text-white/70"
-                          >
-                            {color}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-white/60 text-lg">🧥</span>
+                  <h3 className="text-lg font-semibold">Outfit Studio</h3>
+                </div>
+                <p className="text-sm text-white/60 max-w-xl">
+                  Pure styling mode. No avatar, just sharper choices and smoother motion.
+                </p>
 
-                    <div className="glass rounded-2xl p-4">
-                      <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-                        Layers
-                      </p>
-                      <ul className="mt-3 text-sm text-white/70 space-y-2">
-                        {safeLook.layers.map((item) => (
-                          <li key={item} className="flex items-center gap-2">
-                            <span className="text-white/40">•</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
+                <div className="outfit-ribbon mt-6">
+                  <span>{safeLook.name}</span>
+                  <span>{safeLook.vibe}</span>
+                  <span>{formatTemp(weather.current.feelsLikeF, unit)}</span>
+                  <span>{weather.current.condition}</span>
+                </div>
 
-                  <div className="glass rounded-2xl p-4 mt-4">
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="glass rounded-2xl p-4">
                     <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-                      Extras
+                      Look
                     </p>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {safeLook.extras.map((item) => (
+                    <p className="text-xl font-semibold mt-2">{safeLook.name}</p>
+                    <p className="text-sm text-white/60 mt-1">{safeLook.vibe}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {safeLook.palette.map((color) => (
                         <span
-                          key={item}
-                          className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/70"
+                          key={color}
+                          className="px-2.5 py-1 rounded-full text-xs bg-white/10 text-white/70"
                         >
-                          {item}
+                          {color}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <div className="look-controls">
-                      <button type="button" onClick={handlePrevLook}>
-                        Prev
-                      </button>
-                      <button type="button" onClick={handleNextLook}>
-                        Next
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLookIndex((prev) => prev + 1)}
-                      >
-                        Shuffle
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSaveLook}
-                      className={`look-action ${isSaved ? "look-action-active" : ""}`}
-                    >
-                      {isSaved ? "Saved" : "Save look"}
-                    </button>
-                    <button type="button" className="look-action look-cta">
-                      Shop this look
-                    </button>
-                    <span className="text-xs text-white/50">
-                      Tuned for {formatTemp(weather.current.feelsLikeF, unit)} ·{" "}
-                      {weather.current.condition}
-                    </span>
-                  </div>
-                  <div className="look-dots">
-                    {outfitLooks.map((_, index) => (
-                      <button
-                        key={`look-${index}`}
-                        type="button"
-                        aria-label={`Look ${index + 1}`}
-                        onClick={() => setLookIndex(index)}
-                        className={index === currentLookIndex ? "look-dot active" : "look-dot"}
-                      />
-                    ))}
-                    <span className="text-xs text-white/40">
-                      {currentLookIndex + 1}/{totalLooks}
-                    </span>
+                  <div className="glass rounded-2xl p-4">
+                    <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
+                      Layers
+                    </p>
+                    <ul className="mt-3 text-sm text-white/70 space-y-2">
+                      {safeLook.layers.map((item) => (
+                        <li key={item} className="flex items-center gap-2">
+                          <span className="text-white/40">•</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
 
-                <div className="w-full lg:w-[280px] flex items-center justify-center">
-                  <div
-                    className="avatar-shell"
-                    style={
-                      {
-                        "--avatar-primary": palettePrimary,
-                        "--avatar-secondary": paletteSecondary,
-                        "--avatar-accent": paletteAccent,
-                      } as CSSProperties
-                    }
-                  >
-                    <div className="avatar-glow-backdrop" />
-                    <svg
-                      className="avatar-svg"
-                      viewBox="0 0 240 260"
-                      aria-hidden="true"
-                    >
-                      <defs>
-                        <linearGradient id="bodyGradient" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="var(--avatar-primary)" />
-                          <stop offset="100%" stopColor="rgba(255,255,255,0.15)" />
-                        </linearGradient>
-                        <linearGradient id="headGradient" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#f8fafc" />
-                          <stop offset="100%" stopColor="#e2e8f0" />
-                        </linearGradient>
-                      </defs>
-                      <g className="avatar-bob">
-                        <circle cx="120" cy="80" r="52" fill="url(#headGradient)" />
-                        <circle
-                          cx="95"
-                          cy="62"
-                          r="18"
-                          fill="rgba(255,255,255,0.6)"
-                        />
-                        <rect x="72" y="58" width="96" height="26" rx="13" fill="rgba(96,165,250,0.55)" />
-                        <rect x="60" y="120" width="120" height="96" rx="32" fill="url(#bodyGradient)" />
-                        <rect x="78" y="132" width="84" height="60" rx="24" fill="rgba(255,255,255,0.35)" />
-                        <g className="avatar-eyes">
-                          <circle cx="102" cy="82" r="5" fill="#1f2937" />
-                          <circle cx="138" cy="82" r="5" fill="#1f2937" />
-                        </g>
-                        <path
-                          d="M104 96 Q120 108 136 96"
-                          stroke="#334155"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          fill="none"
-                        />
-                      </g>
-                    </svg>
-                    {avatarIsHot ? <div className="avatar-badge avatar-heat" /> : null}
-                    {avatarIsCold ? <div className="avatar-badge avatar-cold" /> : null}
-                    {avatarIsWet ? <div className="avatar-badge avatar-rain" /> : null}
-                    {avatarIsWindy ? <div className="avatar-badge avatar-wind" /> : null}
+                <div className="glass rounded-2xl p-4 mt-4">
+                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
+                    Extras
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {safeLook.extras.map((item) => (
+                      <span
+                        key={item}
+                        className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/70"
+                      >
+                        {item}
+                      </span>
+                    ))}
                   </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <div className="look-controls">
+                    <button type="button" onClick={handlePrevLook}>
+                      Prev
+                    </button>
+                    <button type="button" onClick={handleNextLook}>
+                      Next
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLookIndex((prev) => prev + 1)}
+                    >
+                      Shuffle
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveLook}
+                    className={`look-action ${isSaved ? "look-action-active" : ""}`}
+                  >
+                    {isSaved ? "Saved" : "Save look"}
+                  </button>
+                  <button type="button" className="look-action look-cta">
+                    Shop this look
+                  </button>
+                </div>
+
+                <div className="look-dots">
+                  {outfitLooks.map((_, index) => (
+                    <button
+                      key={`look-${index}`}
+                      type="button"
+                      aria-label={`Look ${index + 1}`}
+                      onClick={() => setLookIndex(index)}
+                      className={index === currentLookIndex ? "look-dot active" : "look-dot"}
+                    />
+                  ))}
+                  <span className="text-xs text-white/40">
+                    {currentLookIndex + 1}/{totalLooks}
+                  </span>
+                  <span className="text-xs text-white/50">
+                    {isCold ? "Cold strategy" : "Comfort strategy"} · {isWet ? "Wet-ready" : "Dry path"} · {isWindy ? "Wind-lock" : "Calm"}
+                  </span>
                 </div>
               </div>
             </div>
