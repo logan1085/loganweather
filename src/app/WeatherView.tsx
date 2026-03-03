@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import type { WeatherPayload } from "@/lib/nws";
 import type { WeatherMeta } from "@/lib/weather-pipeline";
@@ -28,14 +29,91 @@ const formatDay = (iso: string) =>
     weekday: "short",
   }).format(new Date(iso));
 
-const conditionToTheme = (condition: string) => {
+type SkyTheme = {
+  background: string;
+  glowA: string;
+  glowB: string;
+  glowC: string;
+};
+
+const getSkyTheme = (condition: string, hour: number): SkyTheme => {
   const normalized = condition.toLowerCase();
-  if (normalized.includes("snow")) return "bg-snowy";
-  if (normalized.includes("storm") || normalized.includes("thunder")) return "bg-stormy";
-  if (normalized.includes("rain") || normalized.includes("shower")) return "bg-rainy";
-  if (normalized.includes("cloud")) return "bg-cloudy";
-  if (normalized.includes("night")) return "bg-night";
-  return "bg-sunny";
+  const isNight = hour < 6 || hour >= 20;
+  const isDawn = hour >= 6 && hour < 8;
+  const isDusk = hour >= 17 && hour < 20;
+
+  if (normalized.includes("storm") || normalized.includes("thunder")) {
+    return {
+      background: isNight
+        ? "linear-gradient(160deg, #04060e 0%, #0f172a 35%, #1f2937 75%, #111827 100%)"
+        : "linear-gradient(160deg, #0b1120 0%, #1e293b 35%, #334155 75%, #111827 100%)",
+      glowA: "rgba(99, 102, 241, 0.35)",
+      glowB: "rgba(59, 130, 246, 0.2)",
+      glowC: "rgba(2, 6, 23, 0.25)",
+    };
+  }
+
+  if (normalized.includes("snow")) {
+    return {
+      background: isNight
+        ? "linear-gradient(160deg, #111827 0%, #1f2937 35%, #334155 70%, #1e293b 100%)"
+        : "linear-gradient(160deg, #dbeafe 0%, #cbd5e1 35%, #bfdbfe 70%, #e2e8f0 100%)",
+      glowA: "rgba(147, 197, 253, 0.3)",
+      glowB: "rgba(255, 255, 255, 0.22)",
+      glowC: "rgba(59, 130, 246, 0.15)",
+    };
+  }
+
+  if (normalized.includes("rain") || normalized.includes("shower")) {
+    return {
+      background: isNight
+        ? "linear-gradient(160deg, #020617 0%, #0f172a 40%, #1e293b 75%, #334155 100%)"
+        : "linear-gradient(160deg, #1e293b 0%, #334155 40%, #475569 75%, #64748b 100%)",
+      glowA: "rgba(56, 189, 248, 0.25)",
+      glowB: "rgba(99, 102, 241, 0.18)",
+      glowC: "rgba(148, 163, 184, 0.16)",
+    };
+  }
+
+  if (normalized.includes("cloud")) {
+    return {
+      background: isNight
+        ? "linear-gradient(160deg, #0f172a 0%, #1e293b 35%, #334155 75%, #1f2937 100%)"
+        : isDusk
+          ? "linear-gradient(160deg, #334155 0%, #475569 30%, #64748b 65%, #f59e0b 100%)"
+          : "linear-gradient(160deg, #334155 0%, #475569 35%, #64748b 70%, #94a3b8 100%)",
+      glowA: "rgba(148, 163, 184, 0.28)",
+      glowB: "rgba(125, 211, 252, 0.18)",
+      glowC: "rgba(251, 191, 36, 0.12)",
+    };
+  }
+
+  if (isNight) {
+    return {
+      background: "linear-gradient(160deg, #020617 0%, #0f172a 35%, #1e1b4b 70%, #312e81 100%)",
+      glowA: "rgba(99, 102, 241, 0.32)",
+      glowB: "rgba(56, 189, 248, 0.16)",
+      glowC: "rgba(168, 85, 247, 0.15)",
+    };
+  }
+
+  if (isDawn || isDusk) {
+    return {
+      background: isDawn
+        ? "linear-gradient(160deg, #0ea5e9 0%, #38bdf8 30%, #fb923c 65%, #fbbf24 100%)"
+        : "linear-gradient(160deg, #2563eb 0%, #0ea5e9 30%, #f97316 65%, #fb7185 100%)",
+      glowA: "rgba(251, 191, 36, 0.32)",
+      glowB: "rgba(244, 114, 182, 0.2)",
+      glowC: "rgba(14, 165, 233, 0.2)",
+    };
+  }
+
+  return {
+    background: "linear-gradient(160deg, #0ea5e9 0%, #38bdf8 35%, #7dd3fc 70%, #bae6fd 100%)",
+    glowA: "rgba(14, 165, 233, 0.34)",
+    glowB: "rgba(251, 191, 36, 0.18)",
+    glowC: "rgba(56, 189, 248, 0.16)",
+  };
 };
 
 const conditionToEmoji = (condition: string) => {
@@ -99,8 +177,9 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const [unitChosen, setUnitChosen] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
-  const themeClass = conditionToTheme(weather.current.condition);
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
+  const currentHour = new Date().getHours();
+  const skyTheme = getSkyTheme(weather.current.condition, currentHour);
 
   const loadWeather = async (
     lat: number,
@@ -605,8 +684,22 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
   return (
     <div className="text-white relative">
-      <div className={`weather-bg ${themeClass}`} />
+      <div
+        className="weather-bg"
+        style={
+          {
+            background: skyTheme.background,
+            ["--sky-glow-a" as string]: skyTheme.glowA,
+            ["--sky-glow-b" as string]: skyTheme.glowB,
+            ["--sky-glow-c" as string]: skyTheme.glowC,
+          } as CSSProperties
+        }
+      />
       <div className="particles">
+        <div
+          className="sky-depth-glow"
+          style={{ background: skyTheme.glowC }}
+        />
         {rain.map((drop) => (
           <div
             key={drop.id}

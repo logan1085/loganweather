@@ -18,6 +18,34 @@ body {
   bottom: 0;
   z-index: 0;
   transition: background 1.5s ease;
+  overflow: hidden;
+}
+
+.weather-bg::before,
+.weather-bg::after {
+  content: "";
+  position: absolute;
+  width: 56vw;
+  height: 56vw;
+  max-width: 760px;
+  max-height: 760px;
+  border-radius: 999px;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.weather-bg::before {
+  top: -18%;
+  left: -10%;
+  background: var(--sky-glow-a, rgba(14, 165, 233, 0.25));
+  animation: skyDriftA 24s ease-in-out infinite;
+}
+
+.weather-bg::after {
+  bottom: -26%;
+  right: -12%;
+  background: var(--sky-glow-b, rgba(251, 191, 36, 0.18));
+  animation: skyDriftB 28s ease-in-out infinite;
 }
 
 .particles {
@@ -25,6 +53,20 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 1;
+}
+
+.sky-depth-glow {
+  position: absolute;
+  width: 58vw;
+  height: 58vw;
+  max-width: 740px;
+  max-height: 740px;
+  bottom: -30%;
+  left: 24%;
+  border-radius: 999px;
+  filter: blur(88px);
+  opacity: 0.45;
+  animation: skyDriftC 30s ease-in-out infinite;
 }
 
 .bg-sunny {
@@ -52,10 +94,16 @@ body {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.07)
+  );
+  backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 42px rgba(2, 6, 23, 0.18);
 }
 
 .search-input {
@@ -68,7 +116,7 @@ body {
 .search-input:focus {
   background: rgba(255, 255, 255, 0.25);
   border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.15);
 }
 
 .suggestions-dropdown {
@@ -130,6 +178,36 @@ body {
 
 .pulse-glow {
   animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes skyDriftA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(40px, -25px, 0);
+  }
+}
+
+@keyframes skyDriftB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-34px, 22px, 0);
+  }
+}
+
+@keyframes skyDriftC {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(18px, -32px, 0);
+  }
 }
 
 .detail-card {
