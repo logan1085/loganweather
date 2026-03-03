@@ -487,6 +487,64 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     return { path, area, maxIndex, minIndex, values, min, max };
   }, [weather.daily, unit]);
 
+  const alternatePredictions = useMemo(() => {
+    const hours = weather.hourly.slice(0, 12);
+    if (hours.length < 3) {
+      return { paths: [], bandPath: "", confidence: "Low confidence" };
+    }
+
+    const base = hours.map((hour, index) => {
+      const temp = toUnitValue(hour.temperatureF) ?? 0;
+      const precip = hour.precipChance ?? 0;
+      const volatility = 1 + precip / 100;
+      const timeWeight = 1 + index / 12;
+      return {
+        temp,
+        uncertainty: volatility * timeWeight,
+      };
+    });
+
+    const spread = unit === "F" ? 2.8 : 1.6;
+    const tracks = [-2, -1, 0, 1, 2].map((trackOffset) =>
+      base.map((point) => point.temp + trackOffset * spread * point.uncertainty)
+    );
+
+    const allValues = tracks.flat();
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+    const range = max - min || 1;
+
+    const toCoords = (values: number[]) =>
+      values.map((value, index) => {
+        const x = (index / (values.length - 1)) * 100;
+        const y = 100 - ((value - min) / range) * 100;
+        return { x, y };
+      });
+
+    const toPath = (points: Array<{ x: number; y: number }>) => {
+      if (points.length === 0) return "";
+      return points
+        .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+        .join(" ");
+    };
+
+    const upper = toCoords(tracks[4]);
+    const lower = toCoords([...tracks[0]].reverse());
+    const bandPath = `${toPath(upper)} ${toPath(lower).replace("M", "L")} Z`;
+
+    const paths = tracks.map((track) => toPath(toCoords(track)));
+    const avgUncertainty =
+      base.reduce((sum, point) => sum + point.uncertainty, 0) / base.length;
+    const confidence =
+      avgUncertainty < 1.35
+        ? "High confidence"
+        : avgUncertainty < 1.8
+          ? "Moderate confidence"
+          : "Low confidence";
+
+    return { paths, bandPath, confidence };
+  }, [weather.hourly, unit]);
+
   const dailyRange = useMemo(() => {
     const lows = weather.daily.map((day) => toUnitValue(day.lowF));
     const highs = weather.daily.map((day) => toUnitValue(day.highF));
@@ -1038,6 +1096,36 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                     </div>
                   </div>
                 )})}
+              </div>
+              <div className="mt-5 alt-forecast-panel">
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">
+                    Alternative Predictions
+                  </p>
+                  <span className="text-xs text-white/60">
+                    {alternatePredictions.confidence}
+                  </span>
+                </div>
+                <svg viewBox="0 0 100 40" className="alt-forecast-svg" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="altBand" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgba(125,211,252,0.30)" />
+                      <stop offset="100%" stopColor="rgba(125,211,252,0.04)" />
+                    </linearGradient>
+                  </defs>
+                  {alternatePredictions.bandPath ? (
+                    <path d={alternatePredictions.bandPath} fill="url(#altBand)" />
+                  ) : null}
+                  {alternatePredictions.paths.map((path, index) => (
+                    <path
+                      key={`alt-track-${index}`}
+                      d={path}
+                      className={
+                        index === 2 ? "alt-track alt-track-main" : "alt-track"
+                      }
+                    />
+                  ))}
+                </svg>
               </div>
             </div>
           </section>

@@ -238,6 +238,31 @@ body {
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
+.alt-forecast-panel {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.alt-forecast-svg {
+  width: 100%;
+  height: 72px;
+}
+
+.alt-track {
+  fill: none;
+  stroke: rgba(186, 230, 253, 0.4);
+  stroke-width: 0.55;
+  stroke-linecap: round;
+}
+
+.alt-track-main {
+  stroke: rgba(56, 189, 248, 0.95);
+  stroke-width: 1.1;
+}
+
 .unit-toggle {
   transition: all 0.3s ease;
   background: rgba(255, 255, 255, 0.1);
