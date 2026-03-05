@@ -131,6 +131,88 @@ const conditionToEmoji = (condition: string) => {
   return "☀️";
 };
 
+const renderHeroGlyph = (condition: string) => {
+  const normalized = condition.toLowerCase();
+
+  if (normalized.includes("thunder") || normalized.includes("storm")) {
+    return (
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <defs>
+          <radialGradient id="stormCloud" cx="50%" cy="35%" r="65%">
+            <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.98" />
+            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.92" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="60" cy="53" rx="34" ry="22" fill="url(#stormCloud)" />
+        <ellipse cx="43" cy="50" rx="20" ry="16" fill="#e2e8f0" />
+        <ellipse cx="79" cy="50" rx="18" ry="14" fill="#dbeafe" />
+        <polygon points="58,63 47,87 60,87 52,108 77,77 64,77 72,63" fill="#fbbf24" />
+      </svg>
+    );
+  }
+
+  if (normalized.includes("snow")) {
+    return (
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <ellipse cx="60" cy="52" rx="34" ry="22" fill="#f8fafc" />
+        <ellipse cx="43" cy="49" rx="20" ry="16" fill="#e2e8f0" />
+        <ellipse cx="79" cy="49" rx="18" ry="14" fill="#dbeafe" />
+        <g stroke="#7dd3fc" strokeWidth="2.4" strokeLinecap="round">
+          <path d="M42 77v14M35 84h14M37 79l10 10M47 79l-10 10" />
+          <path d="M60 80v14M53 87h14M55 82l10 10M65 82l-10 10" />
+          <path d="M78 77v14M71 84h14M73 79l10 10M83 79l-10 10" />
+        </g>
+      </svg>
+    );
+  }
+
+  if (normalized.includes("rain") || normalized.includes("drizzle") || normalized.includes("shower")) {
+    return (
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <defs>
+          <radialGradient id="rainCloud" cx="50%" cy="35%" r="65%">
+            <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.98" />
+            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.9" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="60" cy="52" rx="34" ry="22" fill="url(#rainCloud)" />
+        <ellipse cx="43" cy="49" rx="20" ry="16" fill="#e2e8f0" />
+        <ellipse cx="79" cy="49" rx="18" ry="14" fill="#dbeafe" />
+        <g fill="#38bdf8">
+          <path d="M40 74c2 4 5 7 5 11a5 5 0 1 1-10 0c0-4 3-7 5-11Z" />
+          <path d="M60 79c2 4 5 7 5 11a5 5 0 1 1-10 0c0-4 3-7 5-11Z" />
+          <path d="M80 74c2 4 5 7 5 11a5 5 0 1 1-10 0c0-4 3-7 5-11Z" />
+        </g>
+      </svg>
+    );
+  }
+
+  if (normalized.includes("cloud")) {
+    return (
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <ellipse cx="60" cy="58" rx="35" ry="22" fill="#f8fafc" />
+        <ellipse cx="42" cy="56" rx="20" ry="16" fill="#e2e8f0" />
+        <ellipse cx="80" cy="56" rx="18" ry="14" fill="#dbeafe" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <radialGradient id="sunFill" cx="50%" cy="50%" r="56%">
+          <stop offset="0%" stopColor="#fde68a" />
+          <stop offset="100%" stopColor="#f59e0b" />
+        </radialGradient>
+      </defs>
+      <circle cx="60" cy="60" r="22" fill="url(#sunFill)" />
+      <g stroke="#fbbf24" strokeWidth="4" strokeLinecap="round">
+        <path d="M60 18v16M60 86v16M18 60h16M86 60h16M30 30l11 11M79 79l11 11M30 90l11-11M79 41l11-11" />
+      </g>
+    </svg>
+  );
+};
+
 type Particle = {
   id: string;
   left: string;
@@ -490,7 +572,13 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const alternatePredictions = useMemo(() => {
     const hours = weather.hourly.slice(0, 12);
     if (hours.length < 3) {
-      return { paths: [], bandPath: "", confidence: "Low confidence" };
+      return {
+        paths: [],
+        bandPath: "",
+        confidence: "Low confidence",
+        spreadStart: 0,
+        spreadEnd: 0,
+      };
     }
 
     const base = hours.map((hour, index) => {
@@ -533,6 +621,10 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     const bandPath = `${toPath(upper)} ${toPath(lower).replace("M", "L")} Z`;
 
     const paths = tracks.map((track) => toPath(toCoords(track)));
+    const spreadStart = Math.abs(tracks[4][0] - tracks[0][0]);
+    const spreadEnd = Math.abs(
+      tracks[4][tracks[4].length - 1] - tracks[0][tracks[0].length - 1]
+    );
     const avgUncertainty =
       base.reduce((sum, point) => sum + point.uncertainty, 0) / base.length;
     const confidence =
@@ -542,8 +634,13 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
           ? "Moderate confidence"
           : "Low confidence";
 
-    return { paths, bandPath, confidence };
+    return { paths, bandPath, confidence, spreadStart, spreadEnd };
   }, [weather.hourly, unit]);
+
+  const altTickIndexes = useMemo(() => {
+    const count = Math.min(weather.hourly.length, 12);
+    return [0, 3, 6, 9, 11].filter((index) => index < count);
+  }, [weather.hourly]);
 
   const dailyRange = useMemo(() => {
     const lows = weather.daily.map((day) => toUnitValue(day.lowF));
@@ -559,7 +656,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     };
   }, [weather.daily, unit]);
 
-  const heroEmoji = conditionToEmoji(weather.current.condition);
   const onboardingComplete =
     locationChosen && unitChosen && subscribeState === "success";
 
@@ -863,10 +959,19 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                     </p>
                     <p className="text-sm text-white/55 mt-1">{summary}</p>
                   </div>
-                  <div className="relative float-anim hero-emoji-wrap">
-                    <div className="sun-rays" />
-                    <div className="text-[96px] sm:text-[144px] leading-none weather-icon">
-                      {heroEmoji}
+                  <div className="hero-visual">
+                    <div className="hero-orb float-anim">
+                      <div className="sun-rays" />
+                      <div className="hero-orb-glow" />
+                      <div className="hero-orb-emoji">{renderHeroGlyph(weather.current.condition)}</div>
+                    </div>
+                    <div className="hero-visual-meta">
+                      <span>Now</span>
+                      <strong>{weather.current.condition}</strong>
+                      <p>
+                        Precip {weather.hourly[0]?.precipChance ?? 0}% · Wind{" "}
+                        {weather.current.windSpeedMph ?? "—"} mph
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1050,7 +1155,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
           </div>
 
           <section className="fade-in-up mb-8" style={{ animationDelay: "0.18s" }}>
-            <div className="glass rounded-[28px] p-5 sm:p-6">
+            <div className="glass rounded-[28px] p-5 sm:p-6 alt-forecast-shell">
               <div className="flex items-center justify-between gap-4 mb-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-white/45">
                   Alternative Predictions
@@ -1059,6 +1164,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   {alternatePredictions.confidence}
                 </span>
               </div>
+              <div className="alt-forecast-grid" />
               <svg viewBox="0 0 100 40" className="alt-forecast-svg" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="altBand" x1="0" y1="0" x2="0" y2="1">
@@ -1069,14 +1175,57 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 {alternatePredictions.bandPath ? (
                   <path d={alternatePredictions.bandPath} fill="url(#altBand)" />
                 ) : null}
-                {alternatePredictions.paths.map((path, index) => (
+                {[0, 2, 4].map((index) => (
                   <path
                     key={`alt-track-${index}`}
-                    d={path}
-                    className={index === 2 ? "alt-track alt-track-main" : "alt-track"}
+                    d={alternatePredictions.paths[index]}
+                    className={
+                      index === 2
+                        ? "alt-track alt-track-main"
+                        : index === 4
+                          ? "alt-track alt-track-top"
+                          : "alt-track alt-track-bottom"
+                    }
                   />
                 ))}
               </svg>
+              <div className="alt-forecast-summary">
+                <div>
+                  <p>Spread now</p>
+                  <strong>
+                    {Math.max(0, Math.round(alternatePredictions.spreadStart))}
+                    °{unit}
+                  </strong>
+                </div>
+                <div>
+                  <p>Spread later</p>
+                  <strong>
+                    {Math.max(0, Math.round(alternatePredictions.spreadEnd))}
+                    °{unit}
+                  </strong>
+                </div>
+                <div>
+                  <p>Signal</p>
+                  <strong>{alternatePredictions.confidence}</strong>
+                </div>
+              </div>
+              <div className="alt-forecast-legend">
+                <span>
+                  <i className="alt-legend-line alt-legend-main" />
+                  Median path
+                </span>
+                <span>
+                  <i className="alt-legend-line" />
+                  Expected range
+                </span>
+              </div>
+              <div className="alt-forecast-ticks">
+                {altTickIndexes.map((index) => (
+                  <span key={`alt-tick-${index}`}>
+                    {formatTime(weather.hourly[index].time)}
+                  </span>
+                ))}
+              </div>
             </div>
           </section>
 
