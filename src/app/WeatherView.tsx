@@ -563,183 +563,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const onboardingComplete =
     locationChosen && unitChosen && subscribeState === "success";
 
-  const outfitLooks = useMemo(() => {
-    const feelsLike = weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70;
-    const condition = weather.current.condition.toLowerCase();
-    const windy = (weather.current.windSpeedMph ?? 0) >= 18;
-    const wet = condition.includes("rain") || condition.includes("shower");
-    const snowy = condition.includes("snow") || condition.includes("sleet");
-    const stormy = condition.includes("storm") || condition.includes("thunder");
-
-    const looks: Array<{
-      name: string;
-      vibe: string;
-      layers: string[];
-      extras: string[];
-      palette: string[];
-    }> = [];
-
-    if (feelsLike >= 85) {
-      looks.push(
-        {
-          name: "Heatwave Minimal",
-          vibe: "Lightweight + breathable",
-          layers: ["Linen tee", "Pleated shorts", "Sandal slip-ons"],
-          extras: ["SPF 50", "Polarized shades", "Cooling mist"],
-          palette: ["Sand", "Seafoam", "White"],
-        },
-        {
-          name: "City Swim",
-          vibe: "Poolside ready",
-          layers: ["Tank or bandeau", "Relaxed button-down", "Lightweight skirt"],
-          extras: ["Waterproof tote", "Hair clip", "Hydration bottle"],
-          palette: ["Coral", "Sky", "Vanilla"],
-        }
-      );
-    } else if (feelsLike >= 65) {
-      looks.push(
-        {
-          name: "Golden Hour",
-          vibe: "Soft layers",
-          layers: ["Knit tee", "Wide-leg trousers", "Low-profile sneakers"],
-          extras: ["Light scarf", "Crossbody", "Lip balm"],
-          palette: ["Oat", "Terracotta", "Soft navy"],
-        },
-        {
-          name: "Weekend Air",
-          vibe: "Easy + fresh",
-          layers: ["Oversized shirt", "Bike shorts", "Crew socks"],
-          extras: ["Bucket hat", "Mini tote", "Gloss"],
-          palette: ["Cloud", "Mint", "Graphite"],
-        }
-      );
-    } else if (feelsLike >= 45) {
-      looks.push(
-        {
-          name: "Crisp Layer",
-          vibe: "Clean + structured",
-          layers: ["Mock-neck top", "Trench or chore jacket", "Straight denim"],
-          extras: ["Leather belt", "Medium tote", "Light beanie"],
-          palette: ["Stone", "Moss", "Ink"],
-        },
-        {
-          name: "Studio Walk",
-          vibe: "Sport luxe",
-          layers: ["Cropped hoodie", "Cargo skirt", "High-top sneakers"],
-          extras: ["Sleek cap", "Earbuds", "Thermal flask"],
-          palette: ["Pebble", "Pine", "Black"],
-        }
-      );
-    } else if (feelsLike >= 25) {
-      looks.push(
-        {
-          name: "Cold Front",
-          vibe: "Warm but sleek",
-          layers: ["Thermal base", "Puffer coat", "Wool trousers"],
-          extras: ["Cashmere scarf", "Touchscreen gloves", "Hand cream"],
-          palette: ["Charcoal", "Ice", "Cobalt"],
-        },
-        {
-          name: "Night Shift",
-          vibe: "Moody cozy",
-          layers: ["Ribbed turtleneck", "Longline coat", "Chunky boots"],
-          extras: ["Beanie", "Tote", "Layered rings"],
-          palette: ["Onyx", "Smoke", "Plum"],
-        }
-      );
-    } else {
-      looks.push(
-        {
-          name: "Frost Mode",
-          vibe: "Insulated + bold",
-          layers: ["Thermal set", "Down parka", "Snow boots"],
-          extras: ["Neck gaiter", "Heat packs", "Insulated bottle"],
-          palette: ["Midnight", "Arctic blue", "Steel"],
-        },
-        {
-          name: "Polar Luxe",
-          vibe: "Luxury warmth",
-          layers: ["Wool base", "Shearling jacket", "Fleece-lined leggings"],
-          extras: ["Ear warmers", "Leather gloves", "Cabin socks"],
-          palette: ["Espresso", "Ivory", "Deep teal"],
-        }
-      );
-    }
-
-    if (wet || stormy || snowy) {
-      looks.push({
-        name: snowy ? "Snow Drift" : "Rain Shield",
-        vibe: "Weatherproof",
-        layers: [
-          "Waterproof shell",
-          "Grip-sole boots",
-          "Quick-dry layers",
-        ],
-        extras: [
-          snowy ? "Thermal hat" : "Compact umbrella",
-          snowy ? "Snow gaiters" : "Waterproof tote",
-          "Reflective detail",
-        ],
-        palette: ["Slate", "Midnight", "Neon accent"],
-      });
-    }
-
-    if (windy) {
-      looks.push({
-        name: "Wind Runner",
-        vibe: "Secure + tucked",
-        layers: ["Windbreaker", "Slim jogger", "High-top sneakers"],
-        extras: ["Hair ties", "Zip pockets", "Lightweight gloves"],
-        palette: ["Carbon", "Olive", "Sand"],
-      });
-    }
-
-    return looks;
-  }, [weather.current]);
-
-  const [lookIndex, setLookIndex] = useState(0);
-  const [savedLooks, setSavedLooks] = useState<string[]>([]);
-
-  useEffect(() => {
-    setLookIndex(0);
-  }, [weather.location.lat, weather.location.lon, weather.current.condition]);
-
-  const totalLooks = outfitLooks.length;
-  const currentLookIndex = totalLooks
-    ? ((lookIndex % totalLooks) + totalLooks) % totalLooks
-    : 0;
-  const activeLook = outfitLooks[currentLookIndex];
-  const safeLook = activeLook ?? {
-    name: "Weather Ready",
-    vibe: "Tailored to today",
-    layers: [],
-    extras: [],
-    palette: [],
-  };
-  const isSaved = savedLooks.includes(safeLook.name);
-
-  const handlePrevLook = () => {
-    if (totalLooks === 0) return;
-    setLookIndex((prev) => (prev - 1 + totalLooks) % totalLooks);
-  };
-
-  const handleNextLook = () => {
-    if (totalLooks === 0) return;
-    setLookIndex((prev) => (prev + 1) % totalLooks);
-  };
-
-  const handleSaveLook = () => {
-    setSavedLooks((prev) =>
-      prev.includes(safeLook.name)
-        ? prev.filter((name) => name !== safeLook.name)
-        : [...prev, safeLook.name]
-    );
-  };
-  const condition = weather.current.condition.toLowerCase();
-  const isCold = (weather.current.feelsLikeF ?? weather.current.temperatureF ?? 70) < 45;
-  const isWet = condition.includes("rain") || condition.includes("storm");
-  const isWindy = (weather.current.windSpeedMph ?? 0) >= 18;
-
   return (
     <div className="text-white relative">
       <div
@@ -787,12 +610,12 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
 
       <div className="relative z-10 min-h-screen">
         <header className="px-4 pt-6 pb-2">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto topbar flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center shadow-lg">
                 <span className="text-white text-lg">☀️</span>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">SkyView</h1>
+              <h1 className="text-2xl font-bold tracking-tight">SkyView Weather</h1>
             </div>
 
             <div className="relative w-full sm:w-96">
@@ -870,7 +693,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
           </div>
         </header>
 
-        <main className="px-4 py-6 max-w-6xl mx-auto" id="mainContent">
+        <main className="px-4 py-6 max-w-7xl mx-auto" id="mainContent">
           {showOnboarding ? (
             <section className="glass rounded-3xl p-6 sm:p-8 mb-6">
               <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
@@ -1008,135 +831,100 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
               {notice}
             </div>
           ) : null}
-          <section className="fade-in-up mb-8">
-            <div className="glass rounded-3xl p-6 sm:p-10 pulse-glow">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-                <div className="text-center lg:text-left">
-                  <div className="flex items-center gap-2 justify-center lg:justify-start mb-2">
-                    <span className="text-white/60 text-sm">📍</span>
-                    <h2 className="text-2xl sm:text-3xl font-bold">
+          <div className="dashboard-grid mb-8">
+            <section className="fade-in-up hero-stage lg:col-span-2">
+              <div className="glass rounded-[32px] p-6 sm:p-8 pulse-glow hero-surface">
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">
+                      Live weather feed
+                    </p>
+                    <h2 className="text-2xl sm:text-4xl font-semibold mt-2">
                       {weather.location.name}
                     </h2>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="hero-pill">Local time · {timeBadge.time}</span>
-                    <span className="hero-pill">{timeBadge.date}</span>
-                    <span className="hero-pill">
-                      Updated {formatTime(updatedAt)}
-                    </span>
-                    <span className="hero-pill">{meta.source}</span>
-                  </div>
-                  <p className="text-white/60 text-sm font-medium mb-6">
-                    Forecast studio for your day — tuned for feel, not just the numbers.
-                  </p>
-                  <div className="flex items-start gap-2 justify-center lg:justify-start">
-                    <span className="text-8xl sm:text-9xl font-extralight temp-display leading-none">
-                      {formatTemp(weather.current.temperatureF, unit)
-                        .replace("°F", "")
-                        .replace("°C", "")}
-                    </span>
-                    <span className="text-3xl font-light text-white/70 mt-2">
-                      {unit === "F" ? "°F" : "°C"}
-                    </span>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 justify-center lg:justify-start">
-                    <span className="text-lg font-medium text-white/80 capitalize">
-                      {weather.current.condition}
-                    </span>
-                    <span className="text-white/40">|</span>
-                    <span className="text-sm text-white/60">
-                      Feels like {formatTemp(weather.current.feelsLikeF, unit)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 justify-center lg:justify-start text-sm text-white/50">
-                    <span>{summary}</span>
-                    <span className="hero-pill">
-                      Wind {weather.current.windSpeedMph ?? "—"} mph
-                    </span>
-                    <span className="hero-pill">
-                      Humidity {weather.current.humidity ?? "—"}%
-                    </span>
-                  </div>
-                </div>
-                <div className="relative float-anim">
-                  <div className="sun-rays" />
-                  <div className="text-[120px] sm:text-[160px] leading-none weather-icon">
-                    {heroEmoji}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="fade-in-up mb-8" style={{ animationDelay: "0.15s" }}>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="text-white/60">⏱</span>
-              Hourly Forecast
-            </h3>
-            <div className="glass rounded-2xl p-4">
-              <div className="flex gap-4 overflow-x-auto pb-2 hourly-scroll">
-                {weather.hourly.slice(0, 12).map((hour) => {
-                  const emoji = conditionToEmoji(hour.summary);
-                  return (
-                  <div
-                    key={hour.time}
-                    className="forecast-card flex-shrink-0 w-20 glass rounded-2xl p-3 text-center cursor-default"
-                  >
-                    <p className="text-xs text-white/60 font-medium">
-                      {formatTime(hour.time)}
-                    </p>
-                    <div className="text-2xl my-2">{emoji}</div>
-                    <p className="text-sm font-bold">
-                      {formatTemp(hour.temperatureF, unit)}
-                    </p>
-                    <div className="mt-2 flex items-center gap-1 justify-center">
-                      <span className="text-xs text-blue-300">
-                        {hour.precipChance ?? 0}%
+                    <div className="flex flex-wrap items-center gap-2 mt-4">
+                      <span className="hero-pill">Local time · {timeBadge.time}</span>
+                      <span className="hero-pill">{timeBadge.date}</span>
+                      <span className="hero-pill">Updated {formatTime(updatedAt)}</span>
+                      <span className="hero-pill">{meta.source}</span>
+                    </div>
+                    <div className="flex items-end gap-2 mt-8">
+                      <span className="text-[88px] sm:text-[132px] leading-none font-extralight temp-display">
+                        {formatTemp(weather.current.temperatureF, unit)
+                          .replace("°F", "")
+                          .replace("°C", "")}
+                      </span>
+                      <span className="text-4xl text-white/70 mb-3">
+                        {unit === "F" ? "°F" : "°C"}
                       </span>
                     </div>
+                    <p className="text-base sm:text-lg text-white/80 mt-2">
+                      {weather.current.condition} · Feels like {formatTemp(weather.current.feelsLikeF, unit)}
+                    </p>
+                    <p className="text-sm text-white/55 mt-1">{summary}</p>
                   </div>
-                )})}
-              </div>
-              <div className="mt-5 alt-forecast-panel">
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">
-                    Alternative Predictions
-                  </p>
-                  <span className="text-xs text-white/60">
-                    {alternatePredictions.confidence}
-                  </span>
+                  <div className="relative float-anim hero-emoji-wrap">
+                    <div className="sun-rays" />
+                    <div className="text-[96px] sm:text-[144px] leading-none weather-icon">
+                      {heroEmoji}
+                    </div>
+                  </div>
                 </div>
-                <svg viewBox="0 0 100 40" className="alt-forecast-svg" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="altBand" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgba(125,211,252,0.30)" />
-                      <stop offset="100%" stopColor="rgba(125,211,252,0.04)" />
-                    </linearGradient>
-                  </defs>
-                  {alternatePredictions.bandPath ? (
-                    <path d={alternatePredictions.bandPath} fill="url(#altBand)" />
-                  ) : null}
-                  {alternatePredictions.paths.map((path, index) => (
-                    <path
-                      key={`alt-track-${index}`}
-                      d={path}
-                      className={
-                        index === 2 ? "alt-track alt-track-main" : "alt-track"
-                      }
-                    />
-                  ))}
-                </svg>
-              </div>
-            </div>
-          </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            <section className="lg:col-span-1 fade-in-up" style={{ animationDelay: "0.2s" }}>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="text-white/60">📅</span>
-                7-Day Forecast
-              </h3>
-              <div className="glass rounded-2xl p-4">
+                <div className="hero-kpi-grid mt-7">
+                  <div className="hero-kpi-card">
+                    <p>Wind</p>
+                    <strong>{weather.current.windSpeedMph ?? "—"} mph</strong>
+                    <span>{weather.current.windDirection ?? "—"}</span>
+                  </div>
+                  <div className="hero-kpi-card">
+                    <p>Humidity</p>
+                    <strong>{weather.current.humidity ?? "—"}%</strong>
+                    <span>Current</span>
+                  </div>
+                  <div className="hero-kpi-card">
+                    <p>Visibility</p>
+                    <strong>{weather.current.visibilityMiles ?? "—"} mi</strong>
+                    <span>Line of sight</span>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/45 mb-3">
+                    Next 12 hours
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto pb-2 hourly-scroll">
+                    {weather.hourly.slice(0, 12).map((hour) => {
+                      const emoji = conditionToEmoji(hour.summary);
+                      return (
+                        <div
+                          key={hour.time}
+                          className="forecast-card flex-shrink-0 min-w-[84px] px-3 py-3 rounded-2xl text-center bg-white/10 border border-white/15"
+                        >
+                          <p className="text-[11px] text-white/60 font-medium">
+                            {formatTime(hour.time)}
+                          </p>
+                          <div className="text-xl my-1.5">{emoji}</div>
+                          <p className="text-sm font-semibold">
+                            {formatTemp(hour.temperatureF, unit)}
+                          </p>
+                          <p className="text-[11px] text-blue-200 mt-1">
+                            {hour.precipChance ?? 0}% rain
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <aside className="fade-in-up side-stack" style={{ animationDelay: "0.12s" }}>
+              <section className="glass rounded-[28px] p-5">
+                <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+                  <span className="text-white/60">📅</span>
+                  7-Day Forecast
+                </h3>
                 {sparkline.path ? (
                   <div className="sparkline-wrap">
                     <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -1150,23 +938,15 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                           <stop offset="100%" stopColor="rgba(15,23,42,0.05)" />
                         </linearGradient>
                       </defs>
-                      <path
-                        d={sparkline.area}
-                        className="sparkline-area"
-                        fill="url(#sparklineFill)"
-                      />
-                      <path
-                        d={sparkline.path}
-                        className="sparkline-line"
-                        stroke="url(#sparklineStroke)"
-                      />
+                      <path d={sparkline.area} className="sparkline-area" fill="url(#sparklineFill)" />
+                      <path d={sparkline.path} className="sparkline-line" stroke="url(#sparklineStroke)" />
                       {sparkline.values.map((value, index) => {
                         if (value === null) return null;
                         const x = (index / (sparkline.values.length - 1)) * 100;
-                    const sparkMin = sparkline.min ?? 0;
-                    const sparkMax = sparkline.max ?? 1;
-                    const range = sparkMax - sparkMin || 1;
-                    const y = 100 - ((value - sparkMin) / range) * 100;
+                        const sparkMin = sparkline.min ?? 0;
+                        const sparkMax = sparkline.max ?? 1;
+                        const range = sparkMax - sparkMin || 1;
+                        const y = 100 - ((value - sparkMin) / range) * 100;
                         const isPeak = index === sparkline.maxIndex;
                         const isLow = index === sparkline.minIndex;
                         return (
@@ -1192,6 +972,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                     </div>
                   </div>
                 ) : null}
+
                 <div className="space-y-1">
                   {weather.daily.map((day) => {
                     const emoji = conditionToEmoji(day.summary);
@@ -1204,195 +985,98 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       highValue === null ? 0 : ((highValue - dailyRange.min) / range) * 100;
                     const barLeft = Math.min(lowPercent, highPercent);
                     const barWidth = Math.max(highPercent - lowPercent, 8);
-                    return (
-                    <div key={day.date} className="forecast-card flex items-center gap-3 p-3 rounded-xl">
-                      <span className="text-sm font-semibold w-12 text-white/70">
-                        {formatDay(day.date)}
-                      </span>
-                      <span className="text-lg">{emoji}</span>
-                      <span className="text-sm text-white/50 w-8 text-right">
-                        {formatTemp(day.lowF, unit)}
-                      </span>
-                      <div className="flex-1 h-2 rounded-full bg-white/10 relative mx-2">
-                        <div
-                          className="absolute h-full rounded-full bg-gradient-to-r from-blue-400 via-yellow-400 to-orange-400"
-                          style={{ left: `${barLeft}%`, width: `${barWidth}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-semibold w-8">
-                        {formatTemp(day.highF, unit)}
-                      </span>
-                    </div>
-                  )})}
-                </div>
-              </div>
-            </section>
 
-            <section className="lg:col-span-2 fade-in-up" style={{ animationDelay: "0.25s" }}>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="text-white/60">📊</span>
-                Weather Details
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {[
-                  {
-                    label: "Humidity",
-                    value: `${weather.current.humidity ?? "—"}%`,
-                    desc: "Current humidity",
-                  },
-                  {
-                    label: "Wind",
-                    value: `${weather.current.windSpeedMph ?? "—"} mph`,
-                    desc: weather.current.windDirection ?? "",
-                  },
-                  {
-                    label: "Pressure",
-                    value: `${weather.current.pressureInHg ?? "—"} inHg`,
-                    desc: "Barometric",
-                  },
-                  {
-                    label: "Visibility",
-                    value: `${weather.current.visibilityMiles ?? "—"} mi`,
-                    desc: "Line of sight",
-                  },
-                  {
-                    label: "Dew Point",
-                    value: formatTemp(weather.current.dewPointF, unit),
-                    desc: "Moisture",
-                  },
-                  {
-                    label: "Feels Like",
-                    value: formatTemp(weather.current.feelsLikeF, unit),
-                    desc: "Apparent",
-                  },
-                ].map((detail) => (
-                  <div key={detail.label} className="detail-card glass rounded-2xl p-5">
-                    <p className="text-sm text-white/50 font-medium">{detail.label}</p>
-                    <p className="text-2xl font-bold mt-2">{detail.value}</p>
-                    <p className="text-xs text-white/40 mt-1">{detail.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
+                    return (
+                      <div key={day.date} className="forecast-card flex items-center gap-3 p-2.5 rounded-xl">
+                        <span className="text-sm font-semibold w-10 text-white/70">
+                          {formatDay(day.date)}
+                        </span>
+                        <span className="text-base">{emoji}</span>
+                        <span className="text-sm text-white/50 w-8 text-right">
+                          {formatTemp(day.lowF, unit)}
+                        </span>
+                        <div className="flex-1 h-1.5 rounded-full bg-white/10 relative mx-1">
+                          <div
+                            className="absolute h-full rounded-full bg-gradient-to-r from-blue-400 via-yellow-400 to-orange-400"
+                            style={{ left: `${barLeft}%`, width: `${barWidth}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold w-8">
+                          {formatTemp(day.highF, unit)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="glass rounded-[28px] p-5 mt-5">
+                <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+                  <span className="text-white/60">📊</span>
+                  Details
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      label: "Humidity",
+                      value: `${weather.current.humidity ?? "—"}%`,
+                      desc: "Current",
+                    },
+                    {
+                      label: "Pressure",
+                      value: `${weather.current.pressureInHg ?? "—"} inHg`,
+                      desc: "Barometric",
+                    },
+                    {
+                      label: "Dew Point",
+                      value: formatTemp(weather.current.dewPointF, unit),
+                      desc: "Moisture",
+                    },
+                    {
+                      label: "Feels Like",
+                      value: formatTemp(weather.current.feelsLikeF, unit),
+                      desc: "Apparent",
+                    },
+                  ].map((detail) => (
+                    <div key={detail.label} className="detail-card bg-white/10 border border-white/15 rounded-2xl p-4">
+                      <p className="text-[11px] text-white/55 uppercase tracking-[0.1em]">{detail.label}</p>
+                      <p className="text-xl font-semibold mt-2">{detail.value}</p>
+                      <p className="text-xs text-white/45 mt-1">{detail.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </aside>
           </div>
 
-          <section className="fade-in-up mb-8" style={{ animationDelay: "0.28s" }}>
-            <div className="glass rounded-3xl p-6 sm:p-8 outfit-studio">
-              <div className="outfit-aura outfit-aura-one" />
-              <div className="outfit-aura outfit-aura-two" />
-              <div className="outfit-aura outfit-aura-three" />
-
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-white/60 text-lg">🧥</span>
-                  <h3 className="text-lg font-semibold">Outfit Studio</h3>
-                </div>
-                <p className="text-sm text-white/60 max-w-xl">
-                  Pure styling mode. No avatar, just sharper choices and smoother motion.
+          <section className="fade-in-up mb-8" style={{ animationDelay: "0.18s" }}>
+            <div className="glass rounded-[28px] p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-4 mb-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/45">
+                  Alternative Predictions
                 </p>
-
-                <div className="outfit-ribbon mt-6">
-                  <span>{safeLook.name}</span>
-                  <span>{safeLook.vibe}</span>
-                  <span>{formatTemp(weather.current.feelsLikeF, unit)}</span>
-                  <span>{weather.current.condition}</span>
-                </div>
-
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="glass rounded-2xl p-4">
-                    <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-                      Look
-                    </p>
-                    <p className="text-xl font-semibold mt-2">{safeLook.name}</p>
-                    <p className="text-sm text-white/60 mt-1">{safeLook.vibe}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {safeLook.palette.map((color) => (
-                        <span
-                          key={color}
-                          className="px-2.5 py-1 rounded-full text-xs bg-white/10 text-white/70"
-                        >
-                          {color}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="glass rounded-2xl p-4">
-                    <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-                      Layers
-                    </p>
-                    <ul className="mt-3 text-sm text-white/70 space-y-2">
-                      {safeLook.layers.map((item) => (
-                        <li key={item} className="flex items-center gap-2">
-                          <span className="text-white/40">•</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="glass rounded-2xl p-4 mt-4">
-                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-                    Extras
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {safeLook.extras.map((item) => (
-                      <span
-                        key={item}
-                        className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/70"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <div className="look-controls">
-                    <button type="button" onClick={handlePrevLook}>
-                      Prev
-                    </button>
-                    <button type="button" onClick={handleNextLook}>
-                      Next
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLookIndex((prev) => prev + 1)}
-                    >
-                      Shuffle
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSaveLook}
-                    className={`look-action ${isSaved ? "look-action-active" : ""}`}
-                  >
-                    {isSaved ? "Saved" : "Save look"}
-                  </button>
-                  <button type="button" className="look-action look-cta">
-                    Shop this look
-                  </button>
-                </div>
-
-                <div className="look-dots">
-                  {outfitLooks.map((_, index) => (
-                    <button
-                      key={`look-${index}`}
-                      type="button"
-                      aria-label={`Look ${index + 1}`}
-                      onClick={() => setLookIndex(index)}
-                      className={index === currentLookIndex ? "look-dot active" : "look-dot"}
-                    />
-                  ))}
-                  <span className="text-xs text-white/40">
-                    {currentLookIndex + 1}/{totalLooks}
-                  </span>
-                  <span className="text-xs text-white/50">
-                    {isCold ? "Cold strategy" : "Comfort strategy"} · {isWet ? "Wet-ready" : "Dry path"} · {isWindy ? "Wind-lock" : "Calm"}
-                  </span>
-                </div>
+                <span className="text-xs text-white/60">
+                  {alternatePredictions.confidence}
+                </span>
               </div>
+              <svg viewBox="0 0 100 40" className="alt-forecast-svg" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="altBand" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="rgba(125,211,252,0.30)" />
+                    <stop offset="100%" stopColor="rgba(125,211,252,0.04)" />
+                  </linearGradient>
+                </defs>
+                {alternatePredictions.bandPath ? (
+                  <path d={alternatePredictions.bandPath} fill="url(#altBand)" />
+                ) : null}
+                {alternatePredictions.paths.map((path, index) => (
+                  <path
+                    key={`alt-track-${index}`}
+                    d={path}
+                    className={index === 2 ? "alt-track alt-track-main" : "alt-track"}
+                  />
+                ))}
+              </svg>
             </div>
           </section>
 
