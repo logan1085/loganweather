@@ -131,88 +131,6 @@ const conditionToEmoji = (condition: string) => {
   return "☀️";
 };
 
-const renderHeroGlyph = (condition: string) => {
-  const normalized = condition.toLowerCase();
-
-  if (normalized.includes("thunder") || normalized.includes("storm")) {
-    return (
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs>
-          <radialGradient id="stormCloud" cx="50%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.98" />
-            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.92" />
-          </radialGradient>
-        </defs>
-        <ellipse cx="60" cy="53" rx="34" ry="22" fill="url(#stormCloud)" />
-        <ellipse cx="43" cy="50" rx="20" ry="16" fill="#e2e8f0" />
-        <ellipse cx="79" cy="50" rx="18" ry="14" fill="#dbeafe" />
-        <polygon points="58,63 47,87 60,87 52,108 77,77 64,77 72,63" fill="#fbbf24" />
-      </svg>
-    );
-  }
-
-  if (normalized.includes("snow")) {
-    return (
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <ellipse cx="60" cy="52" rx="34" ry="22" fill="#f8fafc" />
-        <ellipse cx="43" cy="49" rx="20" ry="16" fill="#e2e8f0" />
-        <ellipse cx="79" cy="49" rx="18" ry="14" fill="#dbeafe" />
-        <g stroke="#7dd3fc" strokeWidth="2.4" strokeLinecap="round">
-          <path d="M42 77v14M35 84h14M37 79l10 10M47 79l-10 10" />
-          <path d="M60 80v14M53 87h14M55 82l10 10M65 82l-10 10" />
-          <path d="M78 77v14M71 84h14M73 79l10 10M83 79l-10 10" />
-        </g>
-      </svg>
-    );
-  }
-
-  if (normalized.includes("rain") || normalized.includes("drizzle") || normalized.includes("shower")) {
-    return (
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs>
-          <radialGradient id="rainCloud" cx="50%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.98" />
-            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.9" />
-          </radialGradient>
-        </defs>
-        <ellipse cx="60" cy="52" rx="34" ry="22" fill="url(#rainCloud)" />
-        <ellipse cx="43" cy="49" rx="20" ry="16" fill="#e2e8f0" />
-        <ellipse cx="79" cy="49" rx="18" ry="14" fill="#dbeafe" />
-        <g fill="#38bdf8">
-          <path d="M40 74c2 4 5 7 5 11a5 5 0 1 1-10 0c0-4 3-7 5-11Z" />
-          <path d="M60 79c2 4 5 7 5 11a5 5 0 1 1-10 0c0-4 3-7 5-11Z" />
-          <path d="M80 74c2 4 5 7 5 11a5 5 0 1 1-10 0c0-4 3-7 5-11Z" />
-        </g>
-      </svg>
-    );
-  }
-
-  if (normalized.includes("cloud")) {
-    return (
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <ellipse cx="60" cy="58" rx="35" ry="22" fill="#f8fafc" />
-        <ellipse cx="42" cy="56" rx="20" ry="16" fill="#e2e8f0" />
-        <ellipse cx="80" cy="56" rx="18" ry="14" fill="#dbeafe" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 120 120" aria-hidden="true">
-      <defs>
-        <radialGradient id="sunFill" cx="50%" cy="50%" r="56%">
-          <stop offset="0%" stopColor="#fde68a" />
-          <stop offset="100%" stopColor="#f59e0b" />
-        </radialGradient>
-      </defs>
-      <circle cx="60" cy="60" r="22" fill="url(#sunFill)" />
-      <g stroke="#fbbf24" strokeWidth="4" strokeLinecap="round">
-        <path d="M60 18v16M60 86v16M18 60h16M86 60h16M30 30l11 11M79 79l11 11M30 90l11-11M79 41l11-11" />
-      </g>
-    </svg>
-  );
-};
-
 type Particle = {
   id: string;
   left: string;
@@ -260,8 +178,47 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const searchRef = useRef<HTMLInputElement | null>(null);
 
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
-  const currentHour = new Date().getHours();
-  const skyTheme = getSkyTheme(weather.current.condition, currentHour);
+  const skyHour = useMemo(() => {
+    const reference = weather.hourly[0]?.time ?? weather.updatedAt.hourly;
+    const parsed = new Date(reference);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().getHours();
+    }
+    return parsed.getHours();
+  }, [weather.hourly, weather.updatedAt.hourly]);
+  const visualCondition = useMemo(() => {
+    const current = weather.current.condition.toLowerCase();
+    const nextHour = weather.hourly[0]?.summary?.toLowerCase() ?? "";
+    const precipNow = weather.hourly[0]?.precipChance ?? 0;
+
+    const hasStormSignal =
+      current.includes("storm") ||
+      current.includes("thunder") ||
+      nextHour.includes("storm") ||
+      nextHour.includes("thunder");
+    if (hasStormSignal) return "storm";
+
+    const hasSnowSignal =
+      current.includes("snow") ||
+      current.includes("sleet") ||
+      nextHour.includes("snow") ||
+      nextHour.includes("sleet");
+    if (hasSnowSignal) return "snow";
+
+    const hasRainSignal =
+      current.includes("rain") ||
+      current.includes("shower") ||
+      current.includes("drizzle") ||
+      nextHour.includes("rain") ||
+      nextHour.includes("shower") ||
+      nextHour.includes("drizzle") ||
+      precipNow >= 55;
+    if (hasRainSignal) return "rain";
+
+    if (current.includes("cloud") || nextHour.includes("cloud")) return "cloud";
+    return current;
+  }, [weather.current.condition, weather.hourly]);
+  const skyTheme = getSkyTheme(visualCondition, skyHour);
 
   const loadWeather = async (
     lat: number,
@@ -314,7 +271,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   }, [weather.location.lat, weather.location.lon, weather.location.name]);
 
   useEffect(() => {
-    const normalized = weather.current.condition.toLowerCase();
+    const normalized = visualCondition;
     if (normalized.includes("rain") || normalized.includes("storm")) {
       const drops = Array.from({ length: 60 }, (_, index) => ({
         id: `rain-${index}`,
@@ -340,7 +297,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     } else {
       setSnow([]);
     }
-  }, [weather.current.condition]);
+  }, [visualCondition]);
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -569,78 +526,51 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     return { path, area, maxIndex, minIndex, values, min, max };
   }, [weather.daily, unit]);
 
-  const alternatePredictions = useMemo(() => {
+  const hourlyTrend = useMemo(() => {
     const hours = weather.hourly.slice(0, 12);
-    if (hours.length < 3) {
+    if (hours.length < 2) {
       return {
-        paths: [],
-        bandPath: "",
-        confidence: "Low confidence",
-        spreadStart: 0,
-        spreadEnd: 0,
+        linePath: "",
+        areaPath: "",
+        bars: [] as Array<{ x: number; width: number; y: number; height: number; pop: number }>,
+        ticks: [] as Array<{ index: number; label: string }>,
       };
     }
 
-    const base = hours.map((hour, index) => {
-      const temp = toUnitValue(hour.temperatureF) ?? 0;
-      const precip = hour.precipChance ?? 0;
-      const volatility = 1 + precip / 100;
-      const timeWeight = 1 + index / 12;
-      return {
-        temp,
-        uncertainty: volatility * timeWeight,
-      };
+    const temps = hours.map((hour) => toUnitValue(hour.temperatureF) ?? 0);
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
+    const tempRange = maxTemp - minTemp || 1;
+
+    const points = temps.map((temp, index) => {
+      const x = (index / (temps.length - 1)) * 100;
+      const y = 74 - ((temp - minTemp) / tempRange) * 44;
+      return { x, y };
     });
 
-    const spread = unit === "F" ? 2.8 : 1.6;
-    const tracks = [-2, -1, 0, 1, 2].map((trackOffset) =>
-      base.map((point) => point.temp + trackOffset * spread * point.uncertainty)
-    );
+    const linePath = points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+    const areaPath = `${linePath} L ${points[points.length - 1].x} 84 L ${points[0].x} 84 Z`;
 
-    const allValues = tracks.flat();
-    const min = Math.min(...allValues);
-    const max = Math.max(...allValues);
-    const range = max - min || 1;
+    const barWidth = 100 / hours.length;
+    const bars = hours.map((hour, index) => {
+      const pop = hour.precipChance ?? 0;
+      const height = (pop / 100) * 24;
+      const x = index * barWidth + barWidth * 0.18;
+      const width = barWidth * 0.64;
+      const y = 90 - height;
+      return { x, width, y, height, pop };
+    });
 
-    const toCoords = (values: number[]) =>
-      values.map((value, index) => {
-        const x = (index / (values.length - 1)) * 100;
-        const y = 100 - ((value - min) / range) * 100;
-        return { x, y };
-      });
+    const tickIndexes = [0, 3, 6, 9, 11].filter((index) => index < hours.length);
+    const ticks = tickIndexes.map((index) => ({
+      index,
+      label: formatTime(hours[index].time),
+    }));
 
-    const toPath = (points: Array<{ x: number; y: number }>) => {
-      if (points.length === 0) return "";
-      return points
-        .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-        .join(" ");
-    };
-
-    const upper = toCoords(tracks[4]);
-    const lower = toCoords([...tracks[0]].reverse());
-    const bandPath = `${toPath(upper)} ${toPath(lower).replace("M", "L")} Z`;
-
-    const paths = tracks.map((track) => toPath(toCoords(track)));
-    const spreadStart = Math.abs(tracks[4][0] - tracks[0][0]);
-    const spreadEnd = Math.abs(
-      tracks[4][tracks[4].length - 1] - tracks[0][tracks[0].length - 1]
-    );
-    const avgUncertainty =
-      base.reduce((sum, point) => sum + point.uncertainty, 0) / base.length;
-    const confidence =
-      avgUncertainty < 1.35
-        ? "High confidence"
-        : avgUncertainty < 1.8
-          ? "Moderate confidence"
-          : "Low confidence";
-
-    return { paths, bandPath, confidence, spreadStart, spreadEnd };
+    return { linePath, areaPath, bars, ticks };
   }, [weather.hourly, unit]);
-
-  const altTickIndexes = useMemo(() => {
-    const count = Math.min(weather.hourly.length, 12);
-    return [0, 3, 6, 9, 11].filter((index) => index < count);
-  }, [weather.hourly]);
 
   const dailyRange = useMemo(() => {
     const lows = weather.daily.map((day) => toUnitValue(day.lowF));
@@ -930,7 +860,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
           <div className="dashboard-grid mb-8">
             <section className="fade-in-up hero-stage lg:col-span-2">
               <div className="glass rounded-[32px] p-6 sm:p-8 pulse-glow hero-surface">
-                <div className="flex items-start justify-between gap-6">
+                <div className="flex items-start gap-6">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">
                       Live weather feed
@@ -958,21 +888,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       {weather.current.condition} · Feels like {formatTemp(weather.current.feelsLikeF, unit)}
                     </p>
                     <p className="text-sm text-white/55 mt-1">{summary}</p>
-                  </div>
-                  <div className="hero-visual">
-                    <div className="hero-orb float-anim">
-                      <div className="sun-rays" />
-                      <div className="hero-orb-glow" />
-                      <div className="hero-orb-emoji">{renderHeroGlyph(weather.current.condition)}</div>
-                    </div>
-                    <div className="hero-visual-meta">
-                      <span>Now</span>
-                      <strong>{weather.current.condition}</strong>
-                      <p>
-                        Precip {weather.hourly[0]?.precipChance ?? 0}% · Wind{" "}
-                        {weather.current.windSpeedMph ?? "—"} mph
-                      </p>
-                    </div>
                   </div>
                 </div>
 
@@ -1158,71 +1073,55 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
             <div className="glass rounded-[28px] p-5 sm:p-6 alt-forecast-shell">
               <div className="flex items-center justify-between gap-4 mb-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-white/45">
-                  Alternative Predictions
+                  12-Hour Trend
                 </p>
                 <span className="text-xs text-white/60">
-                  {alternatePredictions.confidence}
+                  Actual observations
                 </span>
               </div>
               <div className="alt-forecast-grid" />
-              <svg viewBox="0 0 100 40" className="alt-forecast-svg" preserveAspectRatio="none">
+              <svg viewBox="0 0 100 100" className="alt-forecast-svg" preserveAspectRatio="none">
                 <defs>
-                  <linearGradient id="altBand" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(125,211,252,0.30)" />
-                    <stop offset="100%" stopColor="rgba(125,211,252,0.04)" />
+                  <linearGradient id="trendBand" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="rgba(125,211,252,0.34)" />
+                    <stop offset="100%" stopColor="rgba(125,211,252,0.03)" />
                   </linearGradient>
                 </defs>
-                {alternatePredictions.bandPath ? (
-                  <path d={alternatePredictions.bandPath} fill="url(#altBand)" />
+                {hourlyTrend.areaPath ? (
+                  <path d={hourlyTrend.areaPath} fill="url(#trendBand)" />
                 ) : null}
-                {[0, 2, 4].map((index) => (
-                  <path
-                    key={`alt-track-${index}`}
-                    d={alternatePredictions.paths[index]}
-                    className={
-                      index === 2
-                        ? "alt-track alt-track-main"
-                        : index === 4
-                          ? "alt-track alt-track-top"
-                          : "alt-track alt-track-bottom"
-                    }
+                {hourlyTrend.bars.map((bar, index) => (
+                  <rect
+                    key={`precip-bar-${index}`}
+                    x={bar.x}
+                    y={bar.y}
+                    width={bar.width}
+                    height={bar.height}
+                    rx="0.9"
+                    className="trend-precip-bar"
                   />
                 ))}
+                {hourlyTrend.linePath ? (
+                  <path
+                    d={hourlyTrend.linePath}
+                    className="alt-track alt-track-main"
+                  />
+                ) : null}
               </svg>
-              <div className="alt-forecast-summary">
-                <div>
-                  <p>Spread now</p>
-                  <strong>
-                    {Math.max(0, Math.round(alternatePredictions.spreadStart))}
-                    °{unit}
-                  </strong>
-                </div>
-                <div>
-                  <p>Spread later</p>
-                  <strong>
-                    {Math.max(0, Math.round(alternatePredictions.spreadEnd))}
-                    °{unit}
-                  </strong>
-                </div>
-                <div>
-                  <p>Signal</p>
-                  <strong>{alternatePredictions.confidence}</strong>
-                </div>
-              </div>
               <div className="alt-forecast-legend">
                 <span>
                   <i className="alt-legend-line alt-legend-main" />
-                  Median path
+                  Temperature
                 </span>
                 <span>
-                  <i className="alt-legend-line" />
-                  Expected range
+                  <i className="alt-legend-line alt-legend-bar" />
+                  Precipitation chance
                 </span>
               </div>
               <div className="alt-forecast-ticks">
-                {altTickIndexes.map((index) => (
-                  <span key={`alt-tick-${index}`}>
-                    {formatTime(weather.hourly[index].time)}
+                {hourlyTrend.ticks.map((tick) => (
+                  <span key={`trend-tick-${tick.index}`}>
+                    {tick.label}
                   </span>
                 ))}
               </div>
