@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       timezone,
     });
     return NextResponse.json(result);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Unable to subscribe" }, { status: 500 });
   }
 }

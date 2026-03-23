@@ -4,7 +4,6 @@ import {
   FormEvent,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
 } from "react";
@@ -16,6 +15,11 @@ const formatTemp = (value: number | null, unit: "F" | "C") => {
   return unit === "F"
     ? `${Math.round(value)}°F`
     : `${Math.round((value - 32) * (5 / 9))}°C`;
+};
+
+const convertFromF = (valueF: number | null, unit: "F" | "C") => {
+  if (valueF === null) return null;
+  return unit === "F" ? valueF : (valueF - 32) * (5 / 9);
 };
 
 const formatTime = (iso: string) =>
@@ -34,6 +38,11 @@ type SkyTheme = {
   glowA: string;
   glowB: string;
   glowC: string;
+  brass: string;
+  brassSoft: string;
+  panelFrom: string;
+  panelTo: string;
+  haze: string;
 };
 
 const getSkyTheme = (condition: string, hour: number): SkyTheme => {
@@ -45,74 +54,109 @@ const getSkyTheme = (condition: string, hour: number): SkyTheme => {
   if (normalized.includes("storm") || normalized.includes("thunder")) {
     return {
       background: isNight
-        ? "linear-gradient(160deg, #04060e 0%, #0f172a 35%, #1f2937 75%, #111827 100%)"
-        : "linear-gradient(160deg, #0b1120 0%, #1e293b 35%, #334155 75%, #111827 100%)",
-      glowA: "rgba(99, 102, 241, 0.35)",
-      glowB: "rgba(59, 130, 246, 0.2)",
-      glowC: "rgba(2, 6, 23, 0.25)",
+        ? "radial-gradient(140% 100% at 50% -10%, #1b2232 0%, #0c121d 42%, #070b14 100%)"
+        : "radial-gradient(140% 100% at 50% -10%, #263247 0%, #121a29 45%, #090f1b 100%)",
+      glowA: "rgba(120, 136, 173, 0.42)",
+      glowB: "rgba(193, 148, 88, 0.16)",
+      glowC: "rgba(17, 24, 39, 0.4)",
+      brass: "#d49b52",
+      brassSoft: "rgba(212, 155, 82, 0.26)",
+      panelFrom: "rgba(10, 17, 30, 0.86)",
+      panelTo: "rgba(22, 32, 48, 0.55)",
+      haze: "rgba(52, 74, 102, 0.3)",
     };
   }
 
   if (normalized.includes("snow")) {
     return {
       background: isNight
-        ? "linear-gradient(160deg, #111827 0%, #1f2937 35%, #334155 70%, #1e293b 100%)"
-        : "linear-gradient(160deg, #dbeafe 0%, #cbd5e1 35%, #bfdbfe 70%, #e2e8f0 100%)",
-      glowA: "rgba(147, 197, 253, 0.3)",
-      glowB: "rgba(255, 255, 255, 0.22)",
-      glowC: "rgba(59, 130, 246, 0.15)",
+        ? "radial-gradient(140% 100% at 50% -10%, #20283a 0%, #111928 46%, #0a111d 100%)"
+        : "radial-gradient(140% 100% at 50% -10%, #d8e0ec 0%, #afbccf 48%, #8e9bb0 100%)",
+      glowA: "rgba(176, 204, 232, 0.36)",
+      glowB: "rgba(208, 219, 233, 0.24)",
+      glowC: "rgba(28, 38, 54, 0.26)",
+      brass: "#b4905e",
+      brassSoft: "rgba(180, 144, 94, 0.24)",
+      panelFrom: "rgba(18, 28, 42, 0.75)",
+      panelTo: "rgba(33, 47, 67, 0.5)",
+      haze: "rgba(201, 215, 231, 0.22)",
     };
   }
 
   if (normalized.includes("rain") || normalized.includes("shower")) {
     return {
       background: isNight
-        ? "linear-gradient(160deg, #020617 0%, #0f172a 40%, #1e293b 75%, #334155 100%)"
-        : "linear-gradient(160deg, #1e293b 0%, #334155 40%, #475569 75%, #64748b 100%)",
-      glowA: "rgba(56, 189, 248, 0.25)",
-      glowB: "rgba(99, 102, 241, 0.18)",
-      glowC: "rgba(148, 163, 184, 0.16)",
+        ? "radial-gradient(140% 100% at 50% -10%, #253149 0%, #101826 45%, #080f1a 100%)"
+        : "radial-gradient(140% 100% at 50% -10%, #3d4e67 0%, #1d2a3f 46%, #101a2c 100%)",
+      glowA: "rgba(128, 170, 216, 0.34)",
+      glowB: "rgba(210, 160, 97, 0.14)",
+      glowC: "rgba(45, 65, 95, 0.24)",
+      brass: "#c79457",
+      brassSoft: "rgba(199, 148, 87, 0.22)",
+      panelFrom: "rgba(11, 20, 33, 0.84)",
+      panelTo: "rgba(31, 45, 65, 0.56)",
+      haze: "rgba(125, 168, 214, 0.24)",
     };
   }
 
   if (normalized.includes("cloud")) {
     return {
       background: isNight
-        ? "linear-gradient(160deg, #0f172a 0%, #1e293b 35%, #334155 75%, #1f2937 100%)"
+        ? "radial-gradient(140% 100% at 50% -10%, #2b3547 0%, #111a29 46%, #090f19 100%)"
         : isDusk
-          ? "linear-gradient(160deg, #334155 0%, #475569 30%, #64748b 65%, #f59e0b 100%)"
-          : "linear-gradient(160deg, #334155 0%, #475569 35%, #64748b 70%, #94a3b8 100%)",
-      glowA: "rgba(148, 163, 184, 0.28)",
-      glowB: "rgba(125, 211, 252, 0.18)",
-      glowC: "rgba(251, 191, 36, 0.12)",
+          ? "radial-gradient(140% 100% at 50% -10%, #4d5662 0%, #2f3b4f 44%, #1a2436 100%)"
+          : "radial-gradient(140% 100% at 50% -10%, #5a6372 0%, #354254 46%, #1c273a 100%)",
+      glowA: "rgba(157, 172, 197, 0.32)",
+      glowB: "rgba(201, 156, 95, 0.16)",
+      glowC: "rgba(72, 87, 111, 0.26)",
+      brass: "#c59a63",
+      brassSoft: "rgba(197, 154, 99, 0.2)",
+      panelFrom: "rgba(14, 23, 38, 0.8)",
+      panelTo: "rgba(35, 46, 64, 0.52)",
+      haze: "rgba(170, 187, 209, 0.2)",
     };
   }
 
   if (isNight) {
     return {
-      background: "linear-gradient(160deg, #020617 0%, #0f172a 35%, #1e1b4b 70%, #312e81 100%)",
-      glowA: "rgba(99, 102, 241, 0.32)",
-      glowB: "rgba(56, 189, 248, 0.16)",
-      glowC: "rgba(168, 85, 247, 0.15)",
+      background: "radial-gradient(140% 100% at 50% -10%, #1c2436 0%, #111a2b 45%, #080d17 100%)",
+      glowA: "rgba(102, 126, 162, 0.3)",
+      glowB: "rgba(205, 157, 90, 0.18)",
+      glowC: "rgba(32, 45, 66, 0.2)",
+      brass: "#d5a160",
+      brassSoft: "rgba(213, 161, 96, 0.2)",
+      panelFrom: "rgba(9, 16, 28, 0.82)",
+      panelTo: "rgba(25, 35, 53, 0.54)",
+      haze: "rgba(96, 121, 161, 0.22)",
     };
   }
 
   if (isDawn || isDusk) {
     return {
       background: isDawn
-        ? "linear-gradient(160deg, #0ea5e9 0%, #38bdf8 30%, #fb923c 65%, #fbbf24 100%)"
-        : "linear-gradient(160deg, #2563eb 0%, #0ea5e9 30%, #f97316 65%, #fb7185 100%)",
-      glowA: "rgba(251, 191, 36, 0.32)",
-      glowB: "rgba(244, 114, 182, 0.2)",
-      glowC: "rgba(14, 165, 233, 0.2)",
+        ? "radial-gradient(140% 100% at 50% -10%, #6a7385 0%, #334153 44%, #1b2738 100%)"
+        : "radial-gradient(140% 100% at 50% -10%, #775f53 0%, #3e3f4e 44%, #1f2738 100%)",
+      glowA: "rgba(211, 163, 94, 0.34)",
+      glowB: "rgba(156, 122, 97, 0.24)",
+      glowC: "rgba(74, 93, 121, 0.24)",
+      brass: "#dca35d",
+      brassSoft: "rgba(220, 163, 93, 0.24)",
+      panelFrom: "rgba(15, 24, 36, 0.78)",
+      panelTo: "rgba(36, 47, 67, 0.48)",
+      haze: "rgba(210, 168, 108, 0.24)",
     };
   }
 
   return {
-    background: "linear-gradient(160deg, #0ea5e9 0%, #38bdf8 35%, #7dd3fc 70%, #bae6fd 100%)",
-    glowA: "rgba(14, 165, 233, 0.34)",
-    glowB: "rgba(251, 191, 36, 0.18)",
-    glowC: "rgba(56, 189, 248, 0.16)",
+    background: "radial-gradient(140% 100% at 50% -10%, #445e84 0%, #243754 44%, #121d2f 100%)",
+    glowA: "rgba(111, 160, 221, 0.3)",
+    glowB: "rgba(201, 157, 92, 0.2)",
+    glowC: "rgba(63, 94, 136, 0.2)",
+    brass: "#d7a564",
+    brassSoft: "rgba(215, 165, 100, 0.22)",
+    panelFrom: "rgba(12, 21, 34, 0.8)",
+    panelTo: "rgba(31, 43, 61, 0.5)",
+    haze: "rgba(104, 146, 202, 0.18)",
   };
 };
 
@@ -157,10 +201,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const [weather, setWeather] = useState(initialWeather);
   const [meta, setMeta] = useState(initialMeta);
   const [unit, setUnit] = useState<"F" | "C">("F");
-  const [email, setEmail] = useState("");
-  const [subscribeState, setSubscribeState] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
   const [rain, setRain] = useState<Particle[]>([]);
   const [snow, setSnow] = useState<Particle[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -172,12 +212,11 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     "idle" | "loading" | "error"
   >("idle");
   const [notice, setNotice] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [locationChosen, setLocationChosen] = useState(false);
-  const [unitChosen, setUnitChosen] = useState(false);
-  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
+  const firstHourlySummary = weather.hourly[0]?.summary?.toLowerCase() ?? "";
+  const firstHourlyPrecip = weather.hourly[0]?.precipChance ?? 0;
+  const currentCondition = weather.current.condition.toLowerCase();
   const skyHour = useMemo(() => {
     const reference = weather.hourly[0]?.time ?? weather.updatedAt.hourly;
     const parsed = new Date(reference);
@@ -187,44 +226,81 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     return parsed.getHours();
   }, [weather.hourly, weather.updatedAt.hourly]);
   const visualCondition = useMemo(() => {
-    const current = weather.current.condition.toLowerCase();
-    const nextHour = weather.hourly[0]?.summary?.toLowerCase() ?? "";
-    const precipNow = weather.hourly[0]?.precipChance ?? 0;
-
     const hasStormSignal =
-      current.includes("storm") ||
-      current.includes("thunder") ||
-      nextHour.includes("storm") ||
-      nextHour.includes("thunder");
+      currentCondition.includes("storm") ||
+      currentCondition.includes("thunder") ||
+      firstHourlySummary.includes("storm") ||
+      firstHourlySummary.includes("thunder");
     if (hasStormSignal) return "storm";
 
     const hasSnowSignal =
-      current.includes("snow") ||
-      current.includes("sleet") ||
-      nextHour.includes("snow") ||
-      nextHour.includes("sleet");
+      currentCondition.includes("snow") ||
+      currentCondition.includes("sleet") ||
+      firstHourlySummary.includes("snow") ||
+      firstHourlySummary.includes("sleet");
     if (hasSnowSignal) return "snow";
 
     const hasRainSignal =
-      current.includes("rain") ||
-      current.includes("shower") ||
-      current.includes("drizzle") ||
-      nextHour.includes("rain") ||
-      nextHour.includes("shower") ||
-      nextHour.includes("drizzle") ||
-      precipNow >= 55;
+      currentCondition.includes("rain") ||
+      currentCondition.includes("shower") ||
+      currentCondition.includes("drizzle") ||
+      firstHourlySummary.includes("rain") ||
+      firstHourlySummary.includes("shower") ||
+      firstHourlySummary.includes("drizzle") ||
+      firstHourlyPrecip >= 55;
     if (hasRainSignal) return "rain";
 
-    if (current.includes("cloud") || nextHour.includes("cloud")) return "cloud";
-    return current;
-  }, [weather.current.condition, weather.hourly]);
+    if (currentCondition.includes("cloud") || firstHourlySummary.includes("cloud")) return "cloud";
+    return currentCondition;
+  }, [currentCondition, firstHourlyPrecip, firstHourlySummary]);
   const skyTheme = getSkyTheme(visualCondition, skyHour);
+  const skyPhase = skyHour < 6 || skyHour >= 20 ? "night" : skyHour < 9 ? "dawn" : skyHour >= 17 ? "dusk" : "day";
+  const weatherMood = visualCondition.includes("storm")
+    ? "storm"
+    : visualCondition.includes("snow")
+      ? "snow"
+      : visualCondition.includes("rain")
+        ? "rain"
+        : visualCondition.includes("cloud")
+          ? "cloud"
+          : "clear";
+
+  const outsideHumidity = weather.current.humidity ?? 0;
+  const outsideWind = weather.current.windSpeedMph ?? 0;
+  const outsideFeelsLike = weather.current.feelsLikeF ?? weather.current.temperatureF ?? 0;
+  const outsideWetness = Math.min(
+    100,
+    Math.round(firstHourlyPrecip * 0.65 + outsideHumidity * 0.35)
+  );
+  const outsideWindScore = Math.min(100, Math.round((outsideWind / 40) * 100));
+  const outsideComfortScore = Math.max(
+    0,
+    100 - Math.min(100, Math.round(Math.abs(outsideFeelsLike - 68) * 2.4))
+  );
+  const outsideNow = {
+    wetnessScore: outsideWetness,
+    windScore: outsideWindScore,
+    comfortScore: outsideComfortScore,
+    wetnessLabel:
+      outsideWetness >= 75
+        ? "Street sheen"
+        : outsideWetness >= 45
+          ? "Damp sidewalks"
+          : "Mostly dry",
+    windLabel:
+      outsideWind >= 25 ? "Strong gusts" : outsideWind >= 12 ? "Breezy" : "Light air",
+    comfortLabel:
+      outsideFeelsLike <= 38
+        ? "Layer up"
+        : outsideFeelsLike >= 86
+          ? "Heat load"
+          : "Comfort band",
+  };
 
   const loadWeather = async (
     lat: number,
     lon: number,
-    name?: string | null,
-    source: "auto" | "user" = "auto"
+    name?: string | null
   ) => {
     try {
       setNotice(null);
@@ -243,26 +319,17 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
       const payload = await response.json();
       if (payload?.data) setWeather(payload.data as WeatherPayload);
       if (payload?.meta) setMeta(payload.meta as WeatherMeta);
-      if (source === "user") setLocationChosen(true);
     } catch {
       setNotice("We couldn’t load that location. Try another nearby city.");
     }
   };
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const completed = window.localStorage.getItem("skyview_onboarding_complete");
-      setShowOnboarding(completed !== "true");
-    }
-  }, []);
-
-  useEffect(() => {
     const refresh = async () => {
       await loadWeather(
         weather.location.lat,
         weather.location.lon,
-        weather.location.name,
-        "auto"
+        weather.location.name
       );
     };
 
@@ -332,47 +399,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     };
   }, [searchQuery]);
 
-  const onSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!email) return;
-
-    setSubscribeState("loading");
-    try {
-      const response = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          unit,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          location: {
-            name: weather.location.name,
-            lat: weather.location.lat,
-            lon: weather.location.lon,
-          },
-        }),
-      });
-      if (!response.ok) {
-        setSubscribeState("error");
-        return;
-      }
-      setSubscribeState("success");
-      if (showOnboarding) {
-        window.localStorage.setItem("skyview_onboarding_complete", "true");
-        setShowOnboarding(false);
-      }
-    } catch {
-      setSubscribeState("error");
-    }
-  };
-
-  const dismissOnboarding = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("skyview_onboarding_complete", "true");
-    }
-    setShowOnboarding(false);
-  };
-
   const formatSuggestionLabel = (item: GeoSuggestion) =>
     [item.name, item.admin1, item.country].filter(Boolean).join(", ");
 
@@ -382,7 +408,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     setSuggestions([]);
     setNotice(null);
     setSearchStatus("loading");
-    await loadWeather(item.lat, item.lon, label, "user");
+    await loadWeather(item.lat, item.lon, label);
     setSearchStatus("idle");
   };
 
@@ -426,7 +452,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        await loadWeather(latitude, longitude, "Your location", "user");
+        await loadWeather(latitude, longitude, "Your location");
         setLocationStatus("idle");
       },
       () => {
@@ -437,39 +463,28 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     );
   };
 
-  const focusSearch = () => {
-    searchRef.current?.focus();
-  };
-
   const summary = useMemo(() => {
     const day = weather.daily[0];
     if (!day) return "";
     return `H: ${formatTemp(day.highF, unit)} L: ${formatTemp(day.lowF, unit)}`;
   }, [weather.daily, unit]);
 
-  const toUnitValue = (valueF: number | null) => {
-    if (valueF === null) return null;
-    if (unit === "F") return valueF;
-    return (valueF - 32) * (5 / 9);
-  };
-
-  const timeBadge = useMemo(() => {
-    const now = new Date();
-    const time = new Intl.DateTimeFormat(undefined, {
+  const now = new Date();
+  const timeBadge = {
+    time: new Intl.DateTimeFormat(undefined, {
       hour: "numeric",
       minute: "2-digit",
-    }).format(now);
-    const date = new Intl.DateTimeFormat(undefined, {
+    }).format(now),
+    date: new Intl.DateTimeFormat(undefined, {
       weekday: "short",
       month: "short",
       day: "numeric",
-    }).format(now);
-    return { time, date };
-  }, [updatedAt]);
+    }).format(now),
+  };
 
   const sparkline = useMemo(() => {
     const days = weather.daily.slice(0, 7);
-    const values = days.map((day) => toUnitValue(day.highF));
+    const values = days.map((day) => convertFromF(day.highF, unit));
     const valid = values.filter((value): value is number => value !== null);
     if (valid.length === 0 || days.length < 2) {
       return { path: "", area: "", maxIndex: 0, minIndex: 0, values };
@@ -526,55 +541,9 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     return { path, area, maxIndex, minIndex, values, min, max };
   }, [weather.daily, unit]);
 
-  const hourlyTrend = useMemo(() => {
-    const hours = weather.hourly.slice(0, 12);
-    if (hours.length < 2) {
-      return {
-        linePath: "",
-        areaPath: "",
-        bars: [] as Array<{ x: number; width: number; y: number; height: number; pop: number }>,
-        ticks: [] as Array<{ index: number; label: string }>,
-      };
-    }
-
-    const temps = hours.map((hour) => toUnitValue(hour.temperatureF) ?? 0);
-    const minTemp = Math.min(...temps);
-    const maxTemp = Math.max(...temps);
-    const tempRange = maxTemp - minTemp || 1;
-
-    const points = temps.map((temp, index) => {
-      const x = (index / (temps.length - 1)) * 100;
-      const y = 74 - ((temp - minTemp) / tempRange) * 44;
-      return { x, y };
-    });
-
-    const linePath = points
-      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-      .join(" ");
-    const areaPath = `${linePath} L ${points[points.length - 1].x} 84 L ${points[0].x} 84 Z`;
-
-    const barWidth = 100 / hours.length;
-    const bars = hours.map((hour, index) => {
-      const pop = hour.precipChance ?? 0;
-      const height = (pop / 100) * 24;
-      const x = index * barWidth + barWidth * 0.18;
-      const width = barWidth * 0.64;
-      const y = 90 - height;
-      return { x, width, y, height, pop };
-    });
-
-    const tickIndexes = [0, 3, 6, 9, 11].filter((index) => index < hours.length);
-    const ticks = tickIndexes.map((index) => ({
-      index,
-      label: formatTime(hours[index].time),
-    }));
-
-    return { linePath, areaPath, bars, ticks };
-  }, [weather.hourly, unit]);
-
   const dailyRange = useMemo(() => {
-    const lows = weather.daily.map((day) => toUnitValue(day.lowF));
-    const highs = weather.daily.map((day) => toUnitValue(day.highF));
+    const lows = weather.daily.map((day) => convertFromF(day.lowF, unit));
+    const highs = weather.daily.map((day) => convertFromF(day.highF, unit));
     const lowVals = lows.filter((value): value is number => value !== null);
     const highVals = highs.filter((value): value is number => value !== null);
     if (lowVals.length === 0 || highVals.length === 0) {
@@ -586,19 +555,21 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     };
   }, [weather.daily, unit]);
 
-  const onboardingComplete =
-    locationChosen && unitChosen && subscribeState === "success";
-
   return (
     <div className="text-white relative">
       <div
-        className="weather-bg"
+        className={`weather-bg weather-${weatherMood} phase-${skyPhase}`}
         style={
           {
             background: skyTheme.background,
             ["--sky-glow-a" as string]: skyTheme.glowA,
             ["--sky-glow-b" as string]: skyTheme.glowB,
             ["--sky-glow-c" as string]: skyTheme.glowC,
+            ["--accent-brass" as string]: skyTheme.brass,
+            ["--accent-brass-soft" as string]: skyTheme.brassSoft,
+            ["--surface-from" as string]: skyTheme.panelFrom,
+            ["--surface-to" as string]: skyTheme.panelTo,
+            ["--weather-haze" as string]: skyTheme.haze,
           } as CSSProperties
         }
       />
@@ -607,6 +578,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
           className="sky-depth-glow"
           style={{ background: skyTheme.glowC }}
         />
+        <div className={`weather-veil weather-veil-${weatherMood}`} />
         {rain.map((drop) => (
           <div
             key={drop.id}
@@ -638,8 +610,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
         <header className="px-4 pt-6 pb-2">
           <div className="max-w-7xl mx-auto topbar flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg">☀️</span>
+              <div className="brand-mark w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="brand-mark-dot" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight">SkyView Weather</h1>
             </div>
@@ -655,7 +627,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search a city or ZIP"
                   className="search-input w-full pl-11 pr-20 py-3 rounded-2xl text-white placeholder-white/50 outline-none text-sm font-medium"
-                  ref={searchRef}
                 />
                 <button
                   type="submit"
@@ -697,10 +668,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 className={`unit-toggle px-3 py-1.5 rounded-xl text-sm font-semibold ${
                   unit === "C" ? "unit-active" : ""
                 }`}
-                onClick={() => {
-                  setUnit("C");
-                  setUnitChosen(true);
-                }}
+                onClick={() => setUnit("C")}
               >
                 °C
               </button>
@@ -708,10 +676,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 className={`unit-toggle px-3 py-1.5 rounded-xl text-sm font-semibold ${
                   unit === "F" ? "unit-active" : ""
                 }`}
-                onClick={() => {
-                  setUnit("F");
-                  setUnitChosen(true);
-                }}
+                onClick={() => setUnit("F")}
               >
                 °F
               </button>
@@ -720,138 +685,6 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
         </header>
 
         <main className="px-4 py-6 max-w-7xl mx-auto" id="mainContent">
-          {showOnboarding ? (
-            <section className="glass rounded-3xl p-6 sm:p-8 mb-6">
-              <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-                    Welcome to SkyView
-                  </p>
-                  <h2 className="text-2xl sm:text-3xl font-semibold mt-2">
-                    Let’s personalize your forecast
-                  </h2>
-                  <p className="text-sm text-white/60 mt-2 max-w-xl">
-                    Pick your location, choose your units, and opt in to a daily
-                    briefing. It takes 20 seconds.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={dismissOnboarding}
-                    className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white transition-all"
-                  >
-                    Skip for now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={dismissOnboarding}
-                    disabled={!onboardingComplete}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/20 hover:bg-white/30 transition-all disabled:opacity-40 disabled:hover:bg-white/20"
-                  >
-                    {onboardingComplete ? "Finish setup" : "Complete steps"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div className="glass rounded-2xl p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-semibold">
-                      {locationChosen ? "✓" : "1"}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">Set your location</p>
-                      <p className="text-xs text-white/50 mt-1">
-                        Use GPS or search for a city.
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <button
-                          type="button"
-                          onClick={handleLocate}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 transition-all"
-                        >
-                          Use my location
-                        </button>
-                        <button
-                          type="button"
-                          onClick={focusSearch}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 transition-all"
-                        >
-                          Search
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="glass rounded-2xl p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-semibold">
-                      {unitChosen ? "✓" : "2"}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">Choose units</p>
-                      <p className="text-xs text-white/50 mt-1">
-                        Pick Fahrenheit or Celsius.
-                      </p>
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUnit("F");
-                            setUnitChosen(true);
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                            unit === "F" ? "bg-white/25" : "bg-white/10 hover:bg-white/20"
-                          }`}
-                        >
-                          °F
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUnit("C");
-                            setUnitChosen(true);
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                            unit === "C" ? "bg-white/25" : "bg-white/10 hover:bg-white/20"
-                          }`}
-                        >
-                          °C
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="glass rounded-2xl p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-semibold">
-                      {subscribeState === "success" ? "✓" : "3"}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">Daily briefing</p>
-                      <p className="text-xs text-white/50 mt-1">
-                        Get the 7:00 AM email for your city.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          document
-                            .getElementById("email-section")
-                            ?.scrollIntoView({ behavior: "smooth" });
-                        }}
-                        className="mt-3 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 transition-all"
-                      >
-                        Jump to email sign-up
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          ) : null}
           {notice ? (
             <div className="glass rounded-2xl p-4 mb-6 text-sm text-white/80">
               {notice}
@@ -909,6 +742,51 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   </div>
                 </div>
 
+                <div className="outside-strip mt-6">
+                  <div className="outside-strip-head">
+                    <p>Outside right now</p>
+                    <span>{weather.current.condition}</span>
+                  </div>
+                  <div className="outside-strip-grid">
+                    <div className="outside-meter">
+                      <div className="outside-meter-label">
+                        <span>Pavement</span>
+                        <strong>{outsideNow.wetnessLabel}</strong>
+                      </div>
+                      <div className="outside-meter-track">
+                        <div
+                          className="outside-meter-fill"
+                          style={{ width: `${outsideNow.wetnessScore}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="outside-meter">
+                      <div className="outside-meter-label">
+                        <span>Wind rhythm</span>
+                        <strong>{outsideNow.windLabel}</strong>
+                      </div>
+                      <div className="outside-meter-track">
+                        <div
+                          className="outside-meter-fill"
+                          style={{ width: `${outsideNow.windScore}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="outside-meter">
+                      <div className="outside-meter-label">
+                        <span>Comfort</span>
+                        <strong>{outsideNow.comfortLabel}</strong>
+                      </div>
+                      <div className="outside-meter-track">
+                        <div
+                          className="outside-meter-fill"
+                          style={{ width: `${outsideNow.comfortScore}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="mt-6">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/45 mb-3">
                     Next 12 hours
@@ -954,8 +832,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                           <stop offset="100%" stopColor="#fbbf24" />
                         </linearGradient>
                         <linearGradient id="sparklineFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgba(96,165,250,0.35)" />
-                          <stop offset="100%" stopColor="rgba(15,23,42,0.05)" />
+                          <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.35" />
+                          <stop offset="100%" stopColor="#0f172a" stopOpacity="0.05" />
                         </linearGradient>
                       </defs>
                       <path d={sparkline.area} className="sparkline-area" fill="url(#sparklineFill)" />
@@ -996,8 +874,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                 <div className="space-y-1">
                   {weather.daily.map((day) => {
                     const emoji = conditionToEmoji(day.summary);
-                    const lowValue = toUnitValue(day.lowF);
-                    const highValue = toUnitValue(day.highF);
+                    const lowValue = convertFromF(day.lowF, unit);
+                    const highValue = convertFromF(day.highF, unit);
                     const range = dailyRange.max - dailyRange.min || 1;
                     const lowPercent =
                       lowValue === null ? 0 : ((lowValue - dailyRange.min) / range) * 100;
@@ -1029,148 +907,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   })}
                 </div>
               </section>
-
-              <section className="glass rounded-[28px] p-5 mt-5">
-                <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
-                  <span className="text-white/60">📊</span>
-                  Details
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    {
-                      label: "Humidity",
-                      value: `${weather.current.humidity ?? "—"}%`,
-                      desc: "Current",
-                    },
-                    {
-                      label: "Pressure",
-                      value: `${weather.current.pressureInHg ?? "—"} inHg`,
-                      desc: "Barometric",
-                    },
-                    {
-                      label: "Dew Point",
-                      value: formatTemp(weather.current.dewPointF, unit),
-                      desc: "Moisture",
-                    },
-                    {
-                      label: "Feels Like",
-                      value: formatTemp(weather.current.feelsLikeF, unit),
-                      desc: "Apparent",
-                    },
-                  ].map((detail) => (
-                    <div key={detail.label} className="detail-card bg-white/10 border border-white/15 rounded-2xl p-4">
-                      <p className="text-[11px] text-white/55 uppercase tracking-[0.1em]">{detail.label}</p>
-                      <p className="text-xl font-semibold mt-2">{detail.value}</p>
-                      <p className="text-xs text-white/45 mt-1">{detail.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
             </aside>
           </div>
-
-          <section className="fade-in-up mb-8" style={{ animationDelay: "0.18s" }}>
-            <div className="glass rounded-[28px] p-5 sm:p-6 alt-forecast-shell">
-              <div className="flex items-center justify-between gap-4 mb-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/45">
-                  12-Hour Trend
-                </p>
-                <span className="text-xs text-white/60">
-                  Actual observations
-                </span>
-              </div>
-              <div className="alt-forecast-grid" />
-              <svg viewBox="0 0 100 100" className="alt-forecast-svg" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="trendBand" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(125,211,252,0.34)" />
-                    <stop offset="100%" stopColor="rgba(125,211,252,0.03)" />
-                  </linearGradient>
-                </defs>
-                {hourlyTrend.areaPath ? (
-                  <path d={hourlyTrend.areaPath} fill="url(#trendBand)" />
-                ) : null}
-                {hourlyTrend.bars.map((bar, index) => (
-                  <rect
-                    key={`precip-bar-${index}`}
-                    x={bar.x}
-                    y={bar.y}
-                    width={bar.width}
-                    height={bar.height}
-                    rx="0.9"
-                    className="trend-precip-bar"
-                  />
-                ))}
-                {hourlyTrend.linePath ? (
-                  <path
-                    d={hourlyTrend.linePath}
-                    className="alt-track alt-track-main"
-                  />
-                ) : null}
-              </svg>
-              <div className="alt-forecast-legend">
-                <span>
-                  <i className="alt-legend-line alt-legend-main" />
-                  Temperature
-                </span>
-                <span>
-                  <i className="alt-legend-line alt-legend-bar" />
-                  Precipitation chance
-                </span>
-              </div>
-              <div className="alt-forecast-ticks">
-                {hourlyTrend.ticks.map((tick) => (
-                  <span key={`trend-tick-${tick.index}`}>
-                    {tick.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section
-            id="email-section"
-            className="fade-in-up mb-8"
-            style={{ animationDelay: "0.3s" }}
-          >
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="text-white/60">✉️</span>
-              Morning Email Brief
-            </h3>
-            <div className="glass rounded-2xl p-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div>
-                <p className="text-white/80 font-semibold">
-                  Get a daily summary at 7:00 AM
-                </p>
-                <p className="text-sm text-white/50">
-                  We’ll send the forecast for {weather.location.name}.
-                </p>
-              </div>
-              <form onSubmit={onSubmit} className="flex w-full sm:w-auto gap-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@email.com"
-                  className="search-input w-full sm:w-64 px-4 py-3 rounded-2xl text-white placeholder-white/50 outline-none text-sm font-medium"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-3 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-semibold transition-all"
-                  disabled={subscribeState === "loading"}
-                >
-                  {subscribeState === "loading" ? "Saving" : "Notify"}
-                </button>
-              </form>
-              {subscribeState === "success" ? (
-                <span className="text-xs text-green-200">Subscribed</span>
-              ) : null}
-              {subscribeState === "error" ? (
-                <span className="text-xs text-red-200">Try again</span>
-              ) : null}
-            </div>
-          </section>
         </main>
       </div>
     </div>

@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, sent: sentSet.size });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to send" }, { status: 500 });
   }
 }
