@@ -1,6 +1,7 @@
 const NWS_BASE_URL = "https://api.weather.gov";
 const NYC_COORDS = { lat: 40.7128, lon: -74.006 };
-const NWS_TIMEZONE = "America/New_York";
+const DEFAULT_TIMEZONE = "America/New_York";
+const OBSERVATION_STALE_MS = 90 * 60 * 1000;
 
 const USER_AGENT =
   process.env.NWS_USER_AGENT ??
@@ -70,6 +71,7 @@ type NwsPointsResponse = {
     forecast: string;
     forecastHourly: string;
     observationStations: string;
+    timeZone?: string;
     relativeLocation?: {
       properties?: {
         city?: string;
@@ -97,13 +99,47 @@ const metersToMiles = (value: number | null) =>
 const pascalToInHg = (value: number | null) =>
   value === null ? null : round(value * 0.0002953, 2);
 
-const formatDateKey = (iso: string) =>
-  new Intl.DateTimeFormat("en-US", {
-    timeZone: NWS_TIMEZONE,
+const resolveTimeZone = (timeZone?: string | null) => {
+  if (!timeZone) return null;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone }).format(new Date(0));
+    return timeZone;
+  } catch {
+    return null;
+  }
+};
+
+export const getForecastDateKey = (
+  iso: string,
+  timeZone = DEFAULT_TIMEZONE
+) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return iso.slice(0, 10);
+  }
+
+  const safeTimeZone = resolveTimeZone(timeZone);
+  if (!safeTimeZone) {
+    return iso.slice(0, 10);
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: safeTimeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date(iso));
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    return iso.slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+};
 
 const degreesToCardinal = (value: number | null) => {
   if (value === null || Number.isNaN(value)) return null;
@@ -129,6 +165,32 @@ const degreesToCardinal = (value: number | null) => {
   return directions[index];
 };
 
+export const parseForecastWindSpeed = (value?: string | null) => {
+  if (!value) return null;
+  const matches = value.match(/\d+(?:\.\d+)?/g);
+  if (!matches || matches.length === 0) return null;
+  const maxValue = Math.max(...matches.map((match) => Number.parseFloat(match)));
+  return Number.isFinite(maxValue) ? round(maxValue) : null;
+};
+
+export const isRecentObservation = (
+  observedAt?: string | null,
+  referenceTime?: string | null
+) => {
+  if (!observedAt) return false;
+
+  const observedMs = new Date(observedAt).getTime();
+  const referenceMs = referenceTime
+    ? new Date(referenceTime).getTime()
+    : Date.now();
+  const baselineMs = Number.isNaN(referenceMs)
+    ? Date.now()
+    : Math.max(referenceMs, Date.now());
+
+  if (Number.isNaN(observedMs)) return false;
+  return baselineMs - observedMs <= OBSERVATION_STALE_MS;
+};
+
 const fetchJson = async <T>(url: string): Promise<T> => {
   const response = await fetch(url, {
     headers: {
@@ -150,6 +212,7 @@ export type WeatherPayload = {
     name: string;
     lat: number;
     lon: number;
+    timeZone: string;
   };
   current: {
     temperatureF: number | null;
@@ -163,6 +226,7 @@ export type WeatherPayload = {
     pressureInHg: number | null;
     visibilityMiles: number | null;
     observedAt: string | null;
+    dataSource: "observation" | "forecast";
   };
   daily: Array<{
     date: string;
@@ -183,6 +247,7 @@ export type WeatherPayload = {
   updatedAt: {
     forecast: string;
     hourly: string;
+    observation: string | null;
   };
 };
 
@@ -211,6 +276,8 @@ export const getWeatherByCoords = async (
         `${NWS_BASE_URL}/stations/${stationId}/observations/latest`
       )
     : null;
+  const locationTimeZone =
+    resolveTimeZone(points.properties.timeZone) ?? DEFAULT_TIMEZONE;
 
   const locationName = overrideName ||
     [
@@ -235,7 +302,7 @@ export const getWeatherByCoords = async (
   >();
 
   forecast.properties.periods.forEach((period) => {
-    const dateKey = formatDateKey(period.startTime);
+    const dateKey = getForecastDateKey(period.startTime, locationTimeZone);
     if (!dailyMap.has(dateKey)) {
       dailyMap.set(dateKey, {
         date: period.startTime,
@@ -268,26 +335,54 @@ export const getWeatherByCoords = async (
     observation?.properties.windChill.value ??
     observation?.properties.temperature.value ??
     null;
+  const currentHour = hourlyPeriods[0];
+  const observationFresh = isRecentObservation(
+    observation?.properties.timestamp ?? null,
+    hourly.properties.updated
+  );
+  const forecastWindSpeedMph = parseForecastWindSpeed(currentHour?.windSpeed);
+  const currentTemperatureF = observationFresh
+    ? currentTempF ?? currentHour?.temperature ?? null
+    : currentHour?.temperature ?? currentTempF;
+  const currentFeelsLikeF = observationFresh
+    ? cToF(feelsLike) ?? currentTemperatureF
+    : currentTemperatureF;
+  const currentCondition = observationFresh
+    ? observation?.properties.textDescription ??
+      currentHour?.shortForecast ??
+      "Current conditions"
+    : currentHour?.shortForecast ??
+      observation?.properties.textDescription ??
+      "Current conditions";
 
   return {
     location: {
       name: locationName || "Unknown",
       lat,
       lon,
+      timeZone: locationTimeZone,
     },
     current: {
-      temperatureF: currentTempF ?? hourlyPeriods[0]?.temperature ?? null,
-      feelsLikeF: cToF(feelsLike),
-      condition:
-        observation?.properties.textDescription ??
-        hourlyPeriods[0]?.shortForecast ??
-        "Current conditions",
-      humidity: round(observation?.properties.relativeHumidity.value ?? null),
-      windSpeedMph: mpsToMph(observation?.properties.windSpeed.value ?? null),
+      temperatureF: currentTemperatureF,
+      feelsLikeF: currentFeelsLikeF,
+      condition: currentCondition,
+      humidity: observationFresh
+        ? round(observation?.properties.relativeHumidity.value ?? null) ??
+          round(currentHour?.relativeHumidity?.value ?? null)
+        : round(currentHour?.relativeHumidity?.value ?? null) ??
+          round(observation?.properties.relativeHumidity.value ?? null),
+      windSpeedMph: observationFresh
+        ? mpsToMph(observation?.properties.windSpeed.value ?? null) ??
+          forecastWindSpeedMph
+        : forecastWindSpeedMph ??
+          mpsToMph(observation?.properties.windSpeed.value ?? null),
       windGustMph: mpsToMph(observation?.properties.windGust.value ?? null),
-      windDirection: degreesToCardinal(
-        observation?.properties.windDirection.value ?? null
-      ),
+      windDirection: observationFresh
+        ? degreesToCardinal(observation?.properties.windDirection.value ?? null) ??
+          currentHour?.windDirection ??
+          null
+        : currentHour?.windDirection ??
+          degreesToCardinal(observation?.properties.windDirection.value ?? null),
       dewPointF: cToF(observation?.properties.dewpoint.value ?? null),
       pressureInHg: pascalToInHg(
         observation?.properties.barometricPressure.value ?? null
@@ -296,6 +391,7 @@ export const getWeatherByCoords = async (
         observation?.properties.visibility.value ?? null
       ),
       observedAt: observation?.properties.timestamp ?? null,
+      dataSource: observationFresh ? "observation" : "forecast",
     },
     daily,
     hourly: hourlyPeriods.map((period) => ({
@@ -311,6 +407,7 @@ export const getWeatherByCoords = async (
     updatedAt: {
       forecast: forecast.properties.updated,
       hourly: hourly.properties.updated,
+      observation: observation?.properties.timestamp ?? null,
     },
   };
 };

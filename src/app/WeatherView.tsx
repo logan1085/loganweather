@@ -22,16 +22,80 @@ const convertFromF = (valueF: number | null, unit: "F" | "C") => {
   return unit === "F" ? valueF : (valueF - 32) * (5 / 9);
 };
 
-const formatTime = (iso: string) =>
-  new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(iso));
+const resolveTimeZone = (timeZone?: string | null) => {
+  if (!timeZone) return null;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone }).format(new Date(0));
+    return timeZone;
+  } catch {
+    return null;
+  }
+};
 
-const formatDay = (iso: string) =>
-  new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-  }).format(new Date(iso));
+const formatDateTime = (
+  value: string | number | Date,
+  options: Intl.DateTimeFormatOptions,
+  timeZone?: string | null
+) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const safeTimeZone = resolveTimeZone(timeZone);
+  return new Intl.DateTimeFormat("en-US", {
+    ...options,
+    ...(safeTimeZone ? { timeZone: safeTimeZone } : {}),
+  }).format(date);
+};
+
+const formatTime = (value: string | number | Date, timeZone?: string | null) =>
+  formatDateTime(
+    value,
+    {
+      hour: "numeric",
+      minute: "2-digit",
+    },
+    timeZone
+  );
+
+const formatDay = (value: string, timeZone?: string | null) =>
+  formatDateTime(
+    value,
+    {
+      weekday: "short",
+    },
+    timeZone
+  );
+
+const getHourInTimeZone = (value: string | number | Date, timeZone?: string | null) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return new Date().getHours();
+
+  const safeTimeZone = resolveTimeZone(timeZone);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    hourCycle: "h23",
+    ...(safeTimeZone ? { timeZone: safeTimeZone } : {}),
+  }).formatToParts(date);
+  const hourPart = parts.find((part) => part.type === "hour")?.value ?? "0";
+  return Number.parseInt(hourPart, 10);
+};
+
+const getTimeZoneShortLabel = (
+  value: string | number | Date,
+  timeZone?: string | null
+) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const safeTimeZone = resolveTimeZone(timeZone);
+  if (!safeTimeZone) return null;
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: safeTimeZone,
+    timeZoneName: "short",
+  }).formatToParts(date);
+  return parts.find((part) => part.type === "timeZoneName")?.value ?? null;
+};
 
 type SkyTheme = {
   background: string;
@@ -201,6 +265,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const [weather, setWeather] = useState(initialWeather);
   const [meta, setMeta] = useState(initialMeta);
   const [unit, setUnit] = useState<"F" | "C">("F");
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const [rain, setRain] = useState<Particle[]>([]);
   const [snow, setSnow] = useState<Particle[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -212,6 +277,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     "idle" | "loading" | "error"
   >("idle");
   const [notice, setNotice] = useState<string | null>(null);
+  const locationTimeZone = weather.location.timeZone;
 
   const updatedAt = meta?.fetchedAt ?? weather.updatedAt.hourly;
   const firstHourlySummary = weather.hourly[0]?.summary?.toLowerCase() ?? "";
@@ -219,12 +285,8 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
   const currentCondition = weather.current.condition.toLowerCase();
   const skyHour = useMemo(() => {
     const reference = weather.hourly[0]?.time ?? weather.updatedAt.hourly;
-    const parsed = new Date(reference);
-    if (Number.isNaN(parsed.getTime())) {
-      return new Date().getHours();
-    }
-    return parsed.getHours();
-  }, [weather.hourly, weather.updatedAt.hourly]);
+    return getHourInTimeZone(reference, locationTimeZone);
+  }, [locationTimeZone, weather.hourly, weather.updatedAt.hourly]);
   const visualCondition = useMemo(() => {
     const hasStormSignal =
       currentCondition.includes("storm") ||
@@ -323,6 +385,13 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
       setNotice("We couldn’t load that location. Try another nearby city.");
     }
   };
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const refresh = async () => {
@@ -469,18 +538,58 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
     return `H: ${formatTemp(day.highF, unit)} L: ${formatTemp(day.lowF, unit)}`;
   }, [weather.daily, unit]);
 
-  const now = new Date();
-  const timeBadge = {
-    time: new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(now),
-    date: new Intl.DateTimeFormat(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }).format(now),
-  };
+  const timeBadge = useMemo(() => {
+    const now = new Date(clockNow);
+    return {
+      time: formatTime(now, locationTimeZone),
+      date: formatDateTime(
+        now,
+        {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        },
+        locationTimeZone
+      ),
+      zone: getTimeZoneShortLabel(now, locationTimeZone),
+    };
+  }, [clockNow, locationTimeZone]);
+
+  const refreshStatusLabel =
+    meta.source === "live"
+      ? "Fresh pull"
+      : meta.source === "cache"
+        ? "Cached < 5 min"
+        : "Last good snapshot";
+
+  const currentSourceLabel =
+    weather.current.dataSource === "observation" && weather.current.observedAt
+      ? `Station obs ${formatTime(weather.current.observedAt, locationTimeZone)}`
+      : `Forecast hour ${formatTime(
+          weather.hourly[0]?.time ?? weather.updatedAt.hourly,
+          locationTimeZone
+        )}`;
+
+  const detailHighlights = [
+    {
+      label: "Dew point",
+      value: formatTemp(weather.current.dewPointF, unit),
+    },
+    {
+      label: "Pressure",
+      value:
+        weather.current.pressureInHg === null
+          ? "—"
+          : `${weather.current.pressureInHg} inHg`,
+    },
+    {
+      label: "Wind gusts",
+      value:
+        weather.current.windGustMph === null
+          ? "—"
+          : `${weather.current.windGustMph} mph`,
+    },
+  ];
 
   const sparkline = useMemo(() => {
     const days = weather.daily.slice(0, 7);
@@ -702,10 +811,16 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                       {weather.location.name}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2 mt-4">
-                      <span className="hero-pill">Local time · {timeBadge.time}</span>
+                      <span className="hero-pill">
+                        Local time · {timeBadge.time}
+                        {timeBadge.zone ? ` ${timeBadge.zone}` : ""}
+                      </span>
                       <span className="hero-pill">{timeBadge.date}</span>
-                      <span className="hero-pill">Updated {formatTime(updatedAt)}</span>
-                      <span className="hero-pill">{meta.source}</span>
+                      <span className="hero-pill">
+                        Updated {formatTime(updatedAt, locationTimeZone)}
+                      </span>
+                      <span className="hero-pill">{currentSourceLabel}</span>
+                      <span className="hero-pill">{refreshStatusLabel}</span>
                     </div>
                     <div className="flex items-end gap-2 mt-8">
                       <span className="text-[88px] sm:text-[132px] leading-none font-extralight temp-display">
@@ -787,6 +902,22 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                   </div>
                 </div>
 
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {detailHighlights.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-2xl border border-white/10 bg-black/15 px-4 py-3"
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+                        {item.label}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-white/85">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="mt-6">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/45 mb-3">
                     Next 12 hours
@@ -800,14 +931,14 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                           className="forecast-card flex-shrink-0 min-w-[84px] px-3 py-3 rounded-2xl text-center bg-white/10 border border-white/15"
                         >
                           <p className="text-[11px] text-white/60 font-medium">
-                            {formatTime(hour.time)}
+                            {formatTime(hour.time, locationTimeZone)}
                           </p>
                           <div className="text-xl my-1.5">{emoji}</div>
                           <p className="text-sm font-semibold">
                             {formatTemp(hour.temperatureF, unit)}
                           </p>
                           <p className="text-[11px] text-blue-200 mt-1">
-                            {hour.precipChance ?? 0}% rain
+                            {hour.precipChance ?? 0}% precip
                           </p>
                         </div>
                       );
@@ -887,7 +1018,7 @@ export default function WeatherView({ initialWeather, initialMeta }: WeatherView
                     return (
                       <div key={day.date} className="forecast-card flex items-center gap-3 p-2.5 rounded-xl">
                         <span className="text-sm font-semibold w-10 text-white/70">
-                          {formatDay(day.date)}
+                          {formatDay(day.date, locationTimeZone)}
                         </span>
                         <span className="text-base">{emoji}</span>
                         <span className="text-sm text-white/50 w-8 text-right">
